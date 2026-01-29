@@ -4,6 +4,8 @@
 
 AI 程式設計助手統一設定管理器。編輯一個檔案，同步到所有 AI 工具。
 
+同時支援**系統模式**和**專案模式**！
+
 ## 安裝
 
 ### curl
@@ -26,6 +28,13 @@ bun add -g ai-global
 
 ## 使用方法
 
+### 自動模式偵測
+
+AI Global 會自動偵測你的上下文：
+
+- **系統模式**：當從 `~` 目錄執行時，為系統範圍統一設定
+- **專案模式**：當從任何專案目錄（非 `~`）執行時，為專案特定統一設定
+
 ### 首次執行
 
 ```bash
@@ -34,28 +43,31 @@ ai-global
 
 這將會：
 
-1. 掃描系統中已安裝的 AI 工具
-2. 備份原始設定到 `~/.ai-global/backups/`
-3. 合併所有工具的 AGENTS.md/skills/agents/rules/commands
-4. 建立從各工具設定到共享目錄的符號連結
+1. 偵測當前目錄（系統或專案）
+2. 掃描已安裝的 AI 工具
+3. 備份原始設定到 `.ai-global/backups/`
+4. 合併偵測到的工具的 AGENTS.md/skills/agents/rules/commands
+5. 建立從各工具設定到共享目錄的符號連結
 
 ### 指令列表
 
-| 指令                          | 說明                             |
-| ----------------------------- | -------------------------------- |
-| `ai-global`                   | 掃描、合併、更新符號連結（預設） |
-| `ai-global status`            | 顯示符號連結狀態                 |
-| `ai-global list`              | 列出支援的工具                   |
-| `ai-global backups`           | 列出可用的備份                   |
-| `ai-global unlink <key>`      | 還原某個工具的原始設定           |
-| `ai-global unlink all`        | 還原所有工具                     |
-| `ai-global add <user/repo>` | 新增技能                         |
-| `ai-global upgrade`           | 升級到最新版本                   |
-| `ai-global uninstall`         | 完整解除安裝                     |
-| `ai-global version`           | 顯示版本號                       |
-| `ai-global help`              | 顯示說明                         |
+| 指令                        | 說明                             | 上下文感知 |
+| --------------------------- | -------------------------------- | ---------- |
+| `ai-global`                 | 掃描、合併、更新符號連結（預設） | 是         |
+| `ai-global status`          | 顯示符號連結狀態                 | 是         |
+| `ai-global list`            | 列出支援的工具                   | 是         |
+| `ai-global backups`         | 列出可用的備份                   | 是         |
+| `ai-global unlink <key>`    | 還原某個工具的原始設定           | 是         |
+| `ai-global unlink all`      | 還原所有工具                     | 是         |
+| `ai-global add <user/repo>` | 新增技能                         | 是         |
+| `ai-global upgrade`         | 升級到最新版本                   |            |
+| `ai-global uninstall`       | 完整解除安裝                     |            |
+| `ai-global version`         | 顯示版本號                       |            |
+| `ai-global help`            | 顯示說明                         |            |
 
-### 新增 skills
+**上下文感知**：指令行為取決於當前目錄（系統 vs 專案）
+
+### 新增技能
 
 ```bash
 ai-global add user/repo
@@ -64,16 +76,16 @@ ai-global add https://github.com/user/repo
 
 ## 運作原理
 
+### 系統模式結構
+
 ```
 ~/.ai-global/
-├── AGENTS.md        <- 共享指令（編輯這個）
+├── AGENTS.md        <- 共享 AGENTS.md（編輯這個）
 ├── skills/          <- 共享技能（從所有工具合併）
 ├── agents/          <- 共享代理
 ├── rules/           <- 共享規則
 ├── commands/        <- 共享斜線指令
 └── backups/         <- 原始設定（備份）
-
-各 AI 工具的設定目錄中存放符號連結：
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (符號連結)
@@ -87,15 +99,38 @@ ai-global add https://github.com/user/repo
 ... 以及更多工具
 ```
 
-## 合併行為
+### 專案模式結構
+
+```
+my-project/
+├── .ai-global/          <- 專案特定設定
+│   ├── AGENTS.md        <- 專案 AGENTS.md
+│   ├── skills/          <- 專案技能
+│   ├── agents/          <- 專案代理
+│   ├── rules/           <- 專案規則
+│   ├── commands/        <- 專案指令
+│   └── backups/         <- 專案備份
+└── .cursor/             <- AI 工具設定
+    ├── AGENTS.md -> ../.ai-global/AGENTS.md   (符號連結)
+    └── skills/   -> ../.ai-global/skills/     (符號連結)
+```
+
+### 模式行為
+
+- **系統模式**：管理整個系統的 AI 設定
+- **專案模式**：僅管理特定專案的 AI 設定
+- **自動偵測**：無需指令即可切換模式
+- **上下文感知**：指令將顯示它們正在操作的上下文
+
+### 合併行為
 
 執行 `ai-global` 時，會按檔案名稱合併所有工具的內容：
 
 - Cursor 有 skills: `react/`, `typescript/`
 - Claude 有 skills: `typescript/`, `python/`
-- 合併結果 `~/.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- 合併結果 `.ai-global/skills/`: `react/`, `typescript/`, `python/`
 
-先發現的檔案優先（按檔案名稱去除重複）。
+**最後找到的檔案優先**（後找到的工具會覆蓋同名檔案）。
 
 ## 支援的工具
 

@@ -17,18 +17,22 @@ mkdir -p "$CONFIG_DIR"
 curl -fsSL "$REPO_URL/ai-global" -o "$CONFIG_DIR/ai-global"
 chmod +x "$CONFIG_DIR/ai-global"
 
+# Get version from the downloaded script
+VERSION=$(grep '^VERSION=' "$CONFIG_DIR/ai-global" | head -1 | sed 's/VERSION="//' | sed 's/"//')
+
 # Add to PATH
 if [[ -d /usr/local/bin ]] && [[ -w /usr/local/bin ]]; then
-    ln -sf "$CONFIG_DIR/ai-global" /usr/local/bin/ai-global
-    echo "Installed to /usr/local/bin/ai-global"
+  ln -sf "$CONFIG_DIR/ai-global" /usr/local/bin/ai-global
+  echo "Installed to /usr/local/bin/ai-global"
 else
-    mkdir -p "$HOME/.local/bin"
-    ln -sf "$CONFIG_DIR/ai-global" "$HOME/.local/bin/ai-global"
-    echo "Installed to ~/.local/bin/ai-global"
-    echo ""
-    echo "Make sure ~/.local/bin is in your PATH:"
-    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$CONFIG_DIR/ai-global" "$HOME/.local/bin/ai-global"
+  echo "Installed to ~/.local/bin/ai-global"
+  echo ""
+  echo "Make sure ~/.local/bin is in your PATH:"
+  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
 
 echo ""
-echo "AI Global installed! Run 'ai-global' to get started."
+echo "AI Global v$VERSION installed! Run 'ai-global' to get started."
+echo "Run 'ai-global help' to see all available commands."

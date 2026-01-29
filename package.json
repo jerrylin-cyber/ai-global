@@ -2,30 +2,29 @@
   "name": "ai-global",
   "version": "1.15.0",
   "description": "Unified configuration manager for AI coding assistants",
+  "author": "nanxiaobei",
+  "homepage": "https://github.com/nanxiaobei/ai-global#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nanxiaobei/ai-global.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "claude",
+    "cursor",
+    "gemini",
+    "copilot",
+    "coding-assistant",
+    "config",
+    "symlink"
+  ],
   "bin": {
     "ai-global": "ai-global"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.js"
   },
-  "keywords": [
-    "ai",
-    "claude",
-    "cursor",
-    "copilot",
-    "gemini",
-    "coding-assistant",
-    "coding-assistant",
-    "config",
-    "symlink"
-  ],
-  "author": "nanxiaobei",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nanxiaobei/ai-global.git"
-  },
-  "homepage": "https://github.com/nanxiaobei/ai-global#readme",
   "engines": {
     "node": ">=14"
   },
@@ -36,5 +35,9 @@
   "files": [
     "ai-global",
     "scripts/"
-  ]
+  ],
+  "devDependencies": {
+    "prettier": "^3.8.1",
+    "prettier-plugin-sh": "^0.18.0"
+  }
 }

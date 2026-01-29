@@ -1,8 +1,10 @@
 # AI Global
 
-[简体中文](README_CN.md) | [繁體中文](README_TW.md) | [日本語](README_JP.md) | [한국어](README_KR.md)
+[English](README.md) | [简体中文](README_CN.md) | [繁體中文](README_TW.md) | [日本語](README_JP.md) | [한국어](README_KR.md)
 
 Unified configuration manager for AI coding assistants. Edit one file, sync to all your AI tools.
+
+Works both **System Mode** and **Project Mode**!
 
 ## Installation
 
@@ -26,6 +28,13 @@ bun add -g ai-global
 
 ## Usage
 
+### Automatic Mode Detection
+
+AI Global automatically detects your context:
+
+- **System Mode**: When run from `~` directory, unified configs for system-wide
+- **Project Mode**: When run from any project directory (not `~`), unified configs for project-specific
+
 ### First run
 
 ```bash
@@ -34,26 +43,29 @@ ai-global
 
 This will:
 
-1. Scan your system for installed AI tools
-2. Backup original configs to `~/.ai-global/backups/`
-3. Merge AGENTS.md/skills/agents/rules/commands from all tools
-4. Create symlinks from each tool's config to shared directories
+1. Detect current directory (system or project)
+2. Scan for installed AI tools
+3. Backup original configs to `.ai-global/backups/`
+4. Merge AGENTS.md/skills/agents/rules/commands from detected tools
+5. Create symlinks from each tool's config to shared directories
 
-### Commands
+## Commands
 
-| Command                       | Description                            |
-| ----------------------------- | -------------------------------------- |
-| `ai-global`                   | Scan, merge, update symlinks (default) |
-| `ai-global status`            | Show symlink status                    |
-| `ai-global list`              | List supported tools                   |
-| `ai-global backups`           | List available backups                 |
-| `ai-global unlink <key>`      | Restore a tool's original config       |
-| `ai-global unlink all`        | Restore all tools                      |
-| `ai-global add <user/repo>` | Add skills                             |
-| `ai-global upgrade`           | Upgrade to latest version              |
-| `ai-global uninstall`         | Completely remove ai-global            |
-| `ai-global version`           | Show version                           |
-| `ai-global help`              | Show help                              |
+| Command                     | Description                            | Context-aware |
+| --------------------------- | -------------------------------------- | ------------- |
+| `ai-global`                 | Scan, merge, update symlinks (default) | Yes           |
+| `ai-global status`          | Show symlinks status                   | Yes           |
+| `ai-global list`            | List all supported AI tools            | Yes           |
+| `ai-global backups`         | List available backups                 | Yes           |
+| `ai-global unlink <key>`    | Restore a tool's original config       | Yes           |
+| `ai-global unlink all`      | Restore all tools                      | Yes           |
+| `ai-global add <user/repo>` | Add skills from GitHub repository      | Yes           |
+| `ai-global upgrade`         | Upgrade to latest version              |               |
+| `ai-global uninstall`       | Completely remove ai-global            |               |
+| `ai-global version`         | Show version                           |               |
+| `ai-global help`            | Show help                              |               |
+
+**Context-aware**: Command behavior depends on current directory (system vs project)
 
 ### Add skills
 
@@ -62,7 +74,11 @@ ai-global add user/repo
 ai-global add https://github.com/user/repo
 ```
 
+Skills will be downloaded and added to your `.ai-global/skills/` directory.
+
 ## How it works
+
+### System Mode Structure
 
 ```
 ~/.ai-global/
@@ -72,8 +88,6 @@ ai-global add https://github.com/user/repo
 ├── rules/           <- Shared rules
 ├── commands/        <- Shared slash commands
 └── backups/         <- Original configs (backups)
-
-Each AI tool's config directory contains symlinks:
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (symlink)
@@ -87,15 +101,38 @@ Each AI tool's config directory contains symlinks:
 ... and more tools
 ```
 
-## Merge behavior
+### Project Mode Structure
+
+```
+my-project/
+├── .ai-global/          <- Project-specific configs
+│   ├── AGENTS.md        <- Project AGENTS.md
+│   ├── skills/          <- Project skills
+│   ├── agents/          <- Project agents
+│   ├── rules/           <- Project rules
+│   ├── commands/        <- Project commands
+│   └── backups/         <- Project backups
+└── .cursor/             <- AI tool config
+    ├── AGENTS.md -> ../.ai-global/AGENTS.md   (symlink)
+    └── skills/   -> ../.ai-global/skills/     (symlink)
+```
+
+### Mode Behavior
+
+- **System Mode**: Manages AI configurations across your entire system
+- **Project Mode**: Manages AI configurations for a specific project only
+- **Automatic Detection**: No commands needed to switch between modes
+- **Context-Aware**: Commands will show which context they're operating in
+
+### Merge behavior
 
 When you run `ai-global`, it merges items from all tools by filename:
 
 - Cursor has skills: `react/`, `typescript/`
 - Claude has skills: `typescript/`, `python/`
-- Result in `~/.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- Result in `.ai-global/skills/`: `react/`, `typescript/`, `python/`
 
-The first file found wins (dedup by filename).
+**Last file wins** (later tools overwrite earlier tools with same filename).
 
 ## Supported Tools
 
