@@ -20,7 +20,7 @@ You are tasked with creating multilingual versions of documentation files and ma
 3. **Update language navigation links** at the top of each document:
    - Add links to all available language versions
    - Use native language names for each link (e.g., "English", "简体中文", "繁體中文", "日本語", "한국어")
-   - Ensure all documents include complete, consistent navigation, excluding navigation to themselves.
+   - Ensure all documents include complete, consistent navigation, navigation to itself shows plain text instead of a link.
 
 4. **Follow naming conventions**:
    - Base document: `README.md`

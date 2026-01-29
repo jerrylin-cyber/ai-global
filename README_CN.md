@@ -1,6 +1,6 @@
 # AI Global
 
-[English](README.md) | [繁體中文](README_TW.md) | [日本語](README_JP.md) | [한국어](README_KR.md)
+[English](README.md) | 简体中文 | [繁體中文](README_TW.md) | [日本語](README_JP.md) | [한국어](README_KR.md)
 
 AI 编程助手统一配置管理器。编辑一个文件，同步到所有 AI 工具。
 

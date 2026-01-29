@@ -1,6 +1,6 @@
 # AI Global
 
-[English](README.md) | [简体中文](README_CN.md) | [繁體中文](README_TW.md) | [日本語](README_JP.md)
+[English](README.md) | [简体中文](README_CN.md) | [繁體中文](README_TW.md) | [日本語](README_JP.md) | 한국어
 
 AI 프로그래밍 어시스턴트 통합 설정 관리 도구입니다. 하나의 파일을 편집하여 모든 AI 도구에 동기화하세요.
 
