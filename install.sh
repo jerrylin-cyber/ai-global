@@ -7,6 +7,8 @@ set -e
 
 REPO_URL="https://raw.githubusercontent.com/nanxiaobei/ai-global/main"
 CONFIG_DIR="$HOME/.ai-global"
+GREEN='\033[0;32m'
+NC='\033[0m'
 
 echo "Installing AI Global..."
 
@@ -23,16 +25,16 @@ VERSION=$(grep '^VERSION=' "$CONFIG_DIR/ai-global" | head -1 | sed 's/VERSION="/
 # Add to PATH
 if [[ -d /usr/local/bin ]] && [[ -w /usr/local/bin ]]; then
   ln -sf "$CONFIG_DIR/ai-global" /usr/local/bin/ai-global
-  echo "Installed to /usr/local/bin/ai-global"
 else
   mkdir -p "$HOME/.local/bin"
   ln -sf "$CONFIG_DIR/ai-global" "$HOME/.local/bin/ai-global"
-  echo "Installed to ~/.local/bin/ai-global"
   echo ""
   echo "Make sure ~/.local/bin is in your PATH:"
   echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
 
 echo ""
-echo -e "AI Global v$VERSION installed! Run '\033[36mai-global\033[0m' in ~ (or a project) directory to start."
+echo -e "${GREEN}[OK]${NC} AI Global v$VERSION installed!"
+echo ""
+echo "Run ai-global in ~ (or a project) directory to start."
 echo ""
