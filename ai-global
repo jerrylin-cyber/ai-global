@@ -708,6 +708,7 @@ backup_to_agents_dir() {
 
   local config_backup_dir="$base_dir/.agents_ai-global"
   rm -rf "$config_backup_dir" 2> /dev/null
+  mkdir -p "$config_backup_dir"
 
   # Backup all
   local types=("AGENTS.md" "skills" "rules" "agents" "commands")
