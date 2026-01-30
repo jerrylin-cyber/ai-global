@@ -521,118 +521,97 @@ extract_meta_name() {
 
 # Download from GitHub
 download_from_github() {
-  local type="$1"
-  local ref="$2"
-  local target_dir="$3"
+  local input="$1"
+  local skills_dir="$2"
 
-  local parsed=$(parse_github_ref "$ref")
+  local skills_count=0
+
+  local parsed=$(parse_github_ref "$input")
   local owner=$(echo "$parsed" | cut -d'/' -f1)
   local repo=$(echo "$parsed" | cut -d'/' -f2)
   local path=$(echo "$parsed" | cut -d'/' -f3-)
 
-  if [[ -z "$owner" ]] || [[ -z "$repo" ]]; then
-    log_error "Invalid GitHub reference: $ref"
+  if [[ -z "$owner" ]] || [[ -z "$repo" ]] || [[ -n "$path" ]]; then
+    log_error "Invalid GitHub reference: $input"
     return 1
   fi
 
-  # If path points to a specific file
-  if [[ -n "$path" ]]; then
-    local filename=$(basename "$path")
-    local raw_url="https://raw.githubusercontent.com/$owner/$repo/main/$path"
+  # Clone entire repo or subdirectory
+  local tmp_dir=$(mktemp -d)
+  local clone_url="https://github.com/$owner/$repo.git"
 
-    log_info "Downloading: $raw_url"
+  log_info "Cloning: $clone_url"
 
-    if curl -fsSL "$raw_url" -o "$target_dir/$filename" 2> /dev/null; then
-      log_ok "Added skill to $(beautify_dir "$target_dir/$filename")"
-    else
-      # Try master branch
-      raw_url="https://raw.githubusercontent.com/$owner/$repo/master/$path"
-      if curl -fsSL "$raw_url" -o "$target_dir/$filename" 2> /dev/null; then
-        log_ok "Added skill to $(beautify_dir "$target_dir/$filename")"
-      else
-        log_error "Failed to download: $ref"
-        return 1
+  if git clone --depth 1 --single-branch "$clone_url" "$tmp_dir/$repo"; then
+    echo ""
+    local source_node="$tmp_dir/$repo"
+    [[ -n "$path" ]] && source_node="$tmp_dir/$repo/$path"
+
+    if [[ -d "$source_node" ]]; then
+      local meta_file="SKILL.md"
+
+      # 1. Check if root contains metadata file
+      if [[ -f "$source_node/$meta_file" ]]; then
+        local name=$(extract_meta_name "$source_node/$meta_file" "$(basename "$source_node")")
+        local file_dir="$skills_dir/$name"
+        mkdir -p "$file_dir"
+        cp -R "$source_node"/* "$file_dir/"
+        skills_count=1
       fi
-    fi
-  else
-    # Clone entire repo or subdirectory
-    local tmp_tool_node=$(mktemp -d)
-    local clone_url="https://github.com/$owner/$repo.git"
 
-    log_info "Cloning: $clone_url"
-
-    if git clone --depth 1 --single-branch "$clone_url" "$tmp_tool_node/$repo"; then
-      local source_node="$tmp_tool_node/$repo"
-      [[ -n "$path" ]] && source_node="$tmp_tool_node/$repo/$path"
-
-      if [[ -d "$source_node" ]]; then
-        local count=0
-        local meta_file="SKILL.md"
-
-        # 1. Check if root contains metadata file
-        if [[ -f "$source_node/$meta_file" ]]; then
-          local name=$(extract_meta_name "$source_node/$meta_file" "$(basename "$source_node")")
-          local file_dir="$target_dir/$name"
-          mkdir -p "$file_dir"
-          cp -R "$source_node"/* "$file_dir/"
-          count=1
-        fi
-
-        # 2. Check skills/ subdirectories
-        if [[ $count -eq 0 ]] && [[ -z "$path" ]]; then
-          for dir in skills skill; do
-            if [[ -d "$source_node/$dir" ]]; then
-              # Search subdirectories containing SKILL.md
-              for d in "$source_node/$dir"/*; do
-                [[ ! -d "$d" ]] && continue
-                if [[ -f "$d/$meta_file" ]]; then
-                  local name=$(extract_meta_name "$d/$meta_file" "$(basename "$d")")
-                  mkdir -p "$target_dir/$name"
-                  cp -R "$d"/* "$target_dir/$name/"
-                  ((count++))
-                fi
-              done
-            fi
-
-            # If we found items, we are done with this dir
-            if [[ $count -gt 0 ]]; then
-              source_node="$source_node/$dir"
-              break
-            fi
-          done
-        fi
-
-        # 3. Check src/ directory if still nothing
-        if [[ $count -eq 0 ]] && [[ -d "$source_node/src" ]]; then
-          if [[ -f "$source_node/src/$meta_file" ]]; then
-            local name=$(extract_meta_name "$source_node/src/$meta_file" "$(basename "$source_node")")
-            mkdir -p "$target_dir/$name"
-            cp -R "$source_node/src"/* "$target_dir/$name/"
-            count=1
+      # 2. Check skills/ subdirectories
+      if [[ $skills_count -eq 0 ]] && [[ -z "$path" ]]; then
+        for dir in skills skill; do
+          if [[ -d "$source_node/$dir" ]]; then
+            # Search subdirectories containing SKILL.md
+            for d in "$source_node/$dir"/*; do
+              [[ ! -d "$d" ]] && continue
+              if [[ -f "$d/$meta_file" ]]; then
+                local name=$(extract_meta_name "$d/$meta_file" "$(basename "$d")")
+                mkdir -p "$skills_dir/$name"
+                cp -R "$d"/* "$skills_dir/$name/"
+                echo "  - $name"
+                ((skills_count++))
+              fi
+            done
           fi
-        fi
 
-        if [[ $count -gt 0 ]]; then
-          echo ""
-          log_ok "Added skills from $owner/$repo to $(beautify_dir "$target_dir")"
-        else
-          # Show actual searched path
-          local searched_dir="${source_node#$tmp_tool_node/$repo}"
-          searched_dir="${searched_dir#/}"
-          log_warn "No skill found organized in $owner/$repo${searched_dir:+/$searched_dir}"
-        fi
-      else
-        log_error "Path not found: $path"
-        rm -rf "$tmp_tool_node"
-        return 1
+          # If we found items, we are done with this dir
+          if [[ $skills_count -gt 0 ]]; then
+            source_node="$source_node/$dir"
+            break
+          fi
+        done
       fi
 
-      rm -rf "$tmp_tool_node"
+      # 3. Check src/ directory if still nothing
+      if [[ $skills_count -eq 0 ]] && [[ -d "$source_node/src" ]]; then
+        if [[ -f "$source_node/src/$meta_file" ]]; then
+          local name=$(extract_meta_name "$source_node/src/$meta_file" "$(basename "$source_node")")
+          mkdir -p "$skills_dir/$name"
+          cp -R "$source_node/src"/* "$skills_dir/$name/"
+          skills_count=1
+        fi
+      fi
+
+      if [[ $skills_count -gt 0 ]]; then
+        echo ""
+        log_ok "Added $skills_count skills from $owner/$repo to $(beautify_dir "$skills_dir")"
+      else
+        local searched_dir="${source_node#$tmp_dir/$repo}"
+        searched_dir="${searched_dir#/}"
+        log_warn "No skill found in $owner/$repo${searched_dir:+/$searched_dir}"
+      fi
     else
-      rm -rf "$tmp_tool_node"
-      log_error "Failed to clone: $clone_url"
+      log_error "Path not found: $path"
+      rm -rf "$tmp_dir"
       return 1
     fi
+    rm -rf "$tmp_dir"
+  else
+    rm -rf "$tmp_dir"
+    log_error "Failed to clone: $clone_url"
+    return 1
   fi
 }
 
@@ -676,7 +655,8 @@ add_skill() {
 
   local skills_dir="$base_dir/.ai-global/skills"
   mkdir -p "$skills_dir"
-  download_from_github "skill" "$input" "$skills_dir"
+
+  download_from_github "$input" "$skills_dir"
 }
 
 # Upgrade
