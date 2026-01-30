@@ -4,6 +4,11 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
+const BLUE = "\x1b[34m";
+const GREEN = "\x1b[32m";
+const GRAY = "\x1b[90m";
+const NC = "\x1b[0m";
+
 // Read version from package.json
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"),
@@ -18,9 +23,9 @@ if (!fs.existsSync(configDir)) {
 }
 
 console.log("");
-console.log("\x1b[32m[OK]\x1b[0m AI Global v" + version + " installed!");
+console.log(`${GREEN}[OK]${NC} AI Global v${version} installed!`);
 console.log("");
 console.log(
-  "Run \x1b[36mai-global\x1b[0m in ~ (or a project) directory to start.",
+  `Run ${BLUE}ai-global${NC} in ~ ${GRAY}(or a project)${NC} directory to start.`,
 );
 console.log("");

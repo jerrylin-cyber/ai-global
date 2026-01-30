@@ -7,7 +7,10 @@ set -e
 
 REPO_URL="https://raw.githubusercontent.com/nanxiaobei/ai-global/main"
 CONFIG_DIR="$HOME/.ai-global"
+
+BLUE='\033[0;34m'
 GREEN='\033[0;32m'
+GRAY='\033[0;90m'
 NC='\033[0m'
 
 echo "Installing AI Global..."
@@ -36,5 +39,5 @@ fi
 echo ""
 echo -e "${GREEN}[OK]${NC} AI Global v$VERSION installed!"
 echo ""
-echo "Run ai-global in ~ (or a project) directory to start."
+echo -e "Run ${BLUE}ai-global${NC} in ~ ${GRAY}(or a project)${NC} directory to start."
 echo ""
