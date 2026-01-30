@@ -4,7 +4,7 @@
 # https://github.com/nanxiaobei/ai-global
 
 # Version
-VERSION="2.0.0"
+VERSION="2.1.0"
 
 # Known AI tool patterns
 # Format: nodes|key|name|agents_md|rules|commands|skills|subagents|color
@@ -27,7 +27,7 @@ declare -a KNOWN_PATTERNS=(
   ".kiro|kiro|Kiro CLI|AGENTS.md|steering|.|skills|agents|\\033[38;5;117m"
   ".kilocode|kilocode|Kilo Code|AGENTS.md|rules|commands|skills|.|\\033[38;5;165m"
   ".neovate|neovate|Neovate|AGENTS.md|.|commands|skills|agents|\\033[38;5;118m"
-  ".opencode, .config/opencode|opencode|OpenCode|AGENTS.md|.|command|skill|agents|\\033[38;5;225m"
+  ".opencode, .config/opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
   ".openhands|openhands|OpenHands|AGENTS.md|.|.|skills|.|\\033[38;5;39m"
   ".qodo|qodo|Qodo|AGENTS.md|.|.|.|agents|\\033[38;5;129m"
   ".qoder|qoder|Qoder|AGENTS.md|rules|commands|skills|agents|\\033[38;5;203m"
@@ -68,13 +68,15 @@ log_context_info() {
   [[ "$base_dir" != "$HOME" ]] && mode="project"
 
   log_info "Directory: $(beautify_dir "$base_dir") ($mode mode)"
+  echo ""
 }
 
 # Update: scan, merge, update symlinks
 update_links() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
-  echo ""
+
+  log_info "Scanning AI tools..."
 
   local global_md_dir="$base_dir/.ai-global/global.md"
   local agents_md_dir="$base_dir/.ai-global/AGENTS.md"
@@ -91,14 +93,13 @@ update_links() {
 
   local total_tools=0
 
-  log_info "Scanning AI tools..."
-
-  # If in project mode
-  if [[ "$base_dir" != "$HOME" ]]; then
-    # Create .ai-global directory
+  # Create .ai-global directory if it doesn't exist
+  if [[ ! -d "$base_dir/.ai-global" ]]; then
     mkdir -p "$base_dir/.ai-global"
+  fi
 
-    # Record project
+  # Record project if in project mode
+  if [[ "$base_dir" != "$HOME" ]]; then
     local projects_file="$HOME/.ai-global/projects"
     mkdir -p "$(dirname "$projects_file")"
     if [[ ! -f "$projects_file" ]]; then
@@ -109,13 +110,10 @@ update_links() {
   fi
 
   # Handle AGENTS.md
-  local skip_agents_md=false
+  local is_new_agents_md=false
   if [[ ! -L "$agents_md_dir" ]] && [[ ! -f "$agents_md_dir" ]]; then
     touch "$agents_md_dir"
-    log_info "Created: $(beautify_dir "$agents_md_dir")"
-  else
-    skip_agents_md=true
-    log_info "Skipped merge: $(beautify_dir "$agents_md_dir") (already exists)"
+    is_new_agents_md=true
   fi
 
   # Create directories
@@ -134,10 +132,10 @@ update_links() {
         echo ""
         echo -e "${GREEN}[OK]${NC} ${color}Found: $name${NC}"
 
-        local types=("$agents_md:$agents_md_dir" "$rules:$rules_dir" "$commands:$commands_dir" "$skills:$skills_dir" "$subagents:$subagents_dir")
+        local types=("file:$agents_md:$agents_md_dir" "dir:$rules:$rules_dir" "dir:$commands:$commands_dir" "dir:$skills:$skills_dir" "dir:$subagents:$subagents_dir")
 
         for type_info in "${types[@]}"; do
-          IFS=':' read -r type_node target_dir <<< "$type_info"
+          IFS=':' read -r type_key type_node target_dir <<< "$type_info"
 
           if [[ "$type_node" != "." ]]; then
             local type_dir="$tool_dir/$type_node"
@@ -150,9 +148,9 @@ update_links() {
                 local backup_file="$backups_dir/${tool_node//\//_}.${type_node//\//_}.backup"
                 cp -r "$type_dir" "$backup_file" 2> /dev/null
 
-                if [[ "$type_node" == 'AGENTS.md' ]]; then
+                if [[ "$type_key" == "file" ]]; then
                   # Copy
-                  if [[ "$skip_agents_md" != true ]]; then
+                  if [[ "$is_new_agents_md" == true ]]; then
                     echo "<!-- $name -->" >> "$target_dir"
                     cat "$type_dir" >> "$target_dir"
                     echo "" >> "$target_dir"
@@ -193,17 +191,23 @@ update_links() {
   # Check if any tools were found
   if [[ $total_tools -eq 0 ]]; then
     log_info "No AI tool configurations found"
+    # Remove empty .ai-global directory
+    rm -rf "$base_dir/.ai-global" 2> /dev/null
     echo ""
     return
   fi
 
-  # Check if AGENTS.md is still empty, add template content
-  if [[ -f "$agents_md_dir" ]] && [[ ! -s "$agents_md_dir" ]]; then
-    cat > "$agents_md_dir" << 'EOF'
+  if [[ "$is_new_agents_md" == true ]]; then
+    if [[ -f "$agents_md_dir" ]] && ! grep -q '[^[:space:]]' "$agents_md_dir" 2> /dev/null; then
+      cat > "$agents_md_dir" << 'EOF'
 # AI Coding Assistant
 
 <!-- Add your prompts here. They will sync to all AI tools. -->
 EOF
+    fi
+    log_info "Merged AGENTS.md: $(beautify_dir "$agents_md_dir")"
+  else
+    log_info "Skipped merge: $(beautify_dir "$agents_md_dir") (already exists)"
   fi
 
   log_ok "Done!"
@@ -214,7 +218,6 @@ EOF
 show_status() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
-  echo ""
 
   total_links=0
 
@@ -283,7 +286,6 @@ show_status() {
 list_tools() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
-  echo ""
 
   echo -e "  ${BLUE}Tool             Key          Directory                    AGENTS.md Rules Commands Skills Agents Status${NC}"
   echo -e "  ${BLUE}-----------------------------------------------------------------------------------------------------------${NC}"
@@ -329,7 +331,6 @@ list_tools() {
 list_backups() {
   local base_dir="$(pwd)"
   log_context_info "$base_dir"
-  echo ""
 
   local backups_dir="$base_dir/.ai-global/backups"
   local backups_list=$(find "$backups_dir" -maxdepth 1 -name "*.backup" 2> /dev/null | sort)
@@ -393,11 +394,7 @@ unlink_one_tool() {
 # Unlink all tools
 unlink_all_tools() {
   local base_dir="$1"
-
-  if [[ "$base_dir" == "$(pwd)" ]]; then
-    log_context_info "$base_dir"
-  fi
-  echo ""
+  log_context_info "$base_dir"
 
   local total_unlinked=0
 
@@ -459,7 +456,6 @@ unlink_tool() {
   fi
 
   log_context_info "$base_dir"
-  echo ""
 
   local has_found=false
 
@@ -675,7 +671,6 @@ add_skill() {
 
   local base_dir="$(pwd)"
   log_context_info "$base_dir"
-  echo ""
 
   local skills_dir="$base_dir/.ai-global/skills"
   mkdir -p "$skills_dir"
@@ -720,29 +715,43 @@ upgrade() {
   fi
 }
 
-# Backup AGENTS.md to parent directory
-backup_agents_to_parent() {
+# Backup all ai-global configurations to .agents directory
+backup_to_agents_dir() {
   local base_dir="$1"
-  local agents_md_dir="$base_dir/.ai-global/AGENTS.md"
-  local parent_backup_dir="$base_dir/AGENTS_backup.md"
+  local config_dir="$base_dir/.ai-global"
 
-  if [[ -f "$agents_md_dir" ]]; then
-    cp "$agents_md_dir" "$parent_backup_dir" 2> /dev/null || return 0
-    log_ok "Backed up $(beautify_dir "$agents_md_dir") to $(beautify_dir "$parent_backup_dir")"
-    echo ""
+  if [[ ! -d "$config_dir" ]]; then
+    return 0
+  fi
+
+  local config_backup_dir="$base_dir/.agents_ai-global"
+  rm -rf "$config_backup_dir" 2> /dev/null
+
+  # Backup all
+  local types=("AGENTS.md" "skills" "rules" "agents" "commands")
+
+  for type_node in "${types[@]}"; do
+    if [[ -e "$config_dir/$type_node" ]]; then
+      cp -r "$config_dir/$type_node" "$config_backup_dir/" 2> /dev/null
+    fi
+  done
+
+  # Log backup result only if backup directory was created
+  if [[ -d "$config_backup_dir" ]]; then
+    log_ok "Backed up $(beautify_dir "$config_dir") to ${GREEN}$(beautify_dir "$config_backup_dir")${NC}"
   fi
 }
 
 # Uninstall
 uninstall() {
-  # Backup global AGENTS.md
+  # Backup all configurations to .agents directory
   echo ""
-  backup_agents_to_parent "$HOME"
+  backup_to_agents_dir "$HOME"
   unlink_all_tools "$HOME"
-
-  # Find and clean up all recorded project configurations
-  local projects_file="$HOME/.ai-global/projects"
   echo ""
+
+  # Find and clean up all project configurations
+  local projects_file="$HOME/.ai-global/projects"
   if [[ ! -f "$projects_file" ]]; then
     log_info "No project configurations found"
     echo ""
@@ -758,7 +767,7 @@ uninstall() {
       if [[ -d "$project_dir" ]]; then
         if [[ -d "$project_dir/.ai-global" ]]; then
           log_info "Found project: $(beautify_dir "$project_dir")"
-          backup_agents_to_parent "$project_dir"
+          backup_to_agents_dir "$project_dir"
 
           (cd "$project_dir" && unlink_all_tools "$project_dir" 2> /dev/null || true)
 
@@ -772,7 +781,8 @@ uninstall() {
     done < "$projects_file"
 
     if [[ $project_count -eq 0 ]]; then
-      log_info "No recorded project configurations found"
+      log_info "No project configurations found"
+      echo ""
     fi
   fi
 

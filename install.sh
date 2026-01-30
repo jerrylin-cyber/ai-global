@@ -34,5 +34,5 @@ else
 fi
 
 echo ""
-echo "AI Global v$VERSION installed! Run 'ai-global' to get started."
-echo "Run 'ai-global help' to see all available commands."
+echo -e "AI Global v$VERSION installed! Run '\033[36mai-global\033[0m' in ~ (or a project) directory to start."
+echo ""

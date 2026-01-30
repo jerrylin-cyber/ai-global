@@ -20,6 +20,7 @@ if (!fs.existsSync(configDir)) {
 console.log("");
 console.log("\x1b[32m[OK]\x1b[0m AI Global v" + version + " installed!");
 console.log("");
-console.log("Run \x1b[36mai-global\x1b[0m to scan and link all your AI tools");
-console.log("Run \x1b[36mai-global help\x1b[0m to see all available commands");
+console.log(
+  "Run \x1b[36mai-global\x1b[0m in ~ (or a project) directory to start.",
+);
 console.log("");
