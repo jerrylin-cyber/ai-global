@@ -192,7 +192,7 @@ update_links() {
 
   # Check if any tools were found
   if [[ $total_tools -eq 0 ]]; then
-    log_info "No AI tool configurations found"
+    log_info "No AI tool configs found"
     # Remove empty .ai-global directory
     rm -rf "$base_dir/.ai-global" 2> /dev/null
     echo ""
@@ -697,7 +697,7 @@ upgrade() {
   fi
 }
 
-# Backup all ai-global configurations to .agents directory
+# Backup all ai-global configs to .agents directory
 backup_to_agents_dir() {
   local base_dir="$1"
   local config_dir="$base_dir/.ai-global"
@@ -727,19 +727,19 @@ backup_to_agents_dir() {
 
 # Uninstall
 uninstall() {
-  # Backup all configurations to .agents directory
+  # Backup all configs to .agents directory
   echo ""
   backup_to_agents_dir "$HOME"
   unlink_all_tools "$HOME"
   echo ""
 
-  # Find and clean up all project configurations
+  # Find and clean up all project configs
   local projects_file="$HOME/.ai-global/projects"
   if [[ ! -f "$projects_file" ]]; then
-    log_info "No project configurations found"
+    log_info "No project configs found"
     echo ""
   else
-    log_info "Checking for project configurations..."
+    log_info "Checking for project configs..."
     echo ""
 
     local project_count=0
@@ -764,7 +764,7 @@ uninstall() {
     done < "$projects_file"
 
     if [[ $project_count -eq 0 ]]; then
-      log_info "No project configurations found"
+      log_info "No project configs found"
       echo ""
     fi
   fi

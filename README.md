@@ -119,8 +119,8 @@ my-project/
 
 ### Mode Behavior
 
-- **System Mode**: Manages AI configurations across your entire system
-- **Project Mode**: Manages AI configurations for a specific project only
+- **System Mode**: Manages AI configs across your entire system
+- **Project Mode**: Manages AI configs for a specific project only
 - **Automatic Detection**: No commands needed to switch between modes
 - **Context-Aware**: Commands will show which context they're operating in
 
