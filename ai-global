@@ -6,6 +6,9 @@
 # 版本號
 VERSION="1.0.0"
 
+# 遠端腳本位址
+REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
+
 # 已知的 AI 工具設定模式
 # 格式：nodes|key|name|agents_md|rules|commands|skills|subagents|color
 declare -a KNOWN_PATTERNS=(
@@ -673,7 +676,7 @@ upgrade() {
   log_info "正在檢查更新..."
 
   local remote_version
-  remote_version=$(curl -fsSL "https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global" 2> /dev/null | grep '^VERSION=' | head -1 | sed 's/VERSION="\([^"]*\)"/\1/')
+  remote_version=$(curl -fsSL "$REMOTE_SCRIPT_URL" 2> /dev/null | grep '^VERSION=' | head -1 | sed 's/VERSION="\([^"]*\)"/\1/')
 
   if [[ -z "$remote_version" ]]; then
     log_warn "無法檢查更新"
@@ -695,7 +698,7 @@ upgrade() {
 
   local exec_temp
   exec_temp=$(mktemp)
-  if curl -fsSL "https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global" -o "$exec_temp" 2> /dev/null; then
+  if curl -fsSL "$REMOTE_SCRIPT_URL" -o "$exec_temp" 2> /dev/null; then
     chmod +x "$exec_temp"
 
     # 驗證下載的檔案是否為有效腳本
