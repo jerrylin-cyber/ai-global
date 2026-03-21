@@ -1,8 +1,10 @@
 # AI Global
 
-[English](README.md) · [简体中文](README_CN.md) · [繁體中文](README_TW.md) · [日本語](README_JP.md) · 한국어
+[繁體中文](README.md) · [English](README_EN.md) · [简体中文](README_CN.md) · [日本語](README_JP.md) · 한국어
 
 ---
+
+> **[nanxiaobei/ai-global](https://github.com/nanxiaobei/ai-global)**에서 포크되었습니다. 원작자의 오픈소스 기여에 감사드립니다.
 
 **AI 프로그래밍 어시스턴트 통합 설정 관리 도구입니다.**
 
@@ -15,7 +17,7 @@
 ### curl
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nanxiaobei/ai-global/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lazyjerry/ai-global/main/install.sh | bash
 ```
 
 ### npm

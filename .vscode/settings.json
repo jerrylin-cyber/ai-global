@@ -1,0 +1,15 @@
+{
+  "github.copilot.chat.claudeAgent.enabled": false,
+  "github.copilot.chat.cloudAgent.enabled": false,
+  "chat.useNestedAgentsMdFiles": true,
+  "chat.agentsControl.enabled": true,
+  "chat.unifiedAgentsBar.enabled": true,
+  "chat.agentSkillsLocations": {
+    "~/.agents/skills": false,
+    "~/.claude/skills": false
+  },
+  "chat.agentFilesLocations": {
+    "~/.copilot/agents": false
+  },
+  "chat.useClaudeMdFile": false
+}
