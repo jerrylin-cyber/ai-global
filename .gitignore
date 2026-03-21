@@ -5,4 +5,5 @@ node_modules
 .github
 .claude
 .cursor
-.docs/*
+docs/*
+tests/*
