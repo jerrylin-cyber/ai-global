@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# AI Global: Unified AI Tools Configuration Manager
-# https://github.com/nanxiaobei/ai-global
+# AI Global：統一 AI 工具設定管理器
+# https://github.com/lazyjerry/ai-global
 
-# Version
-VERSION="2.6.2"
+# 版本號
+VERSION="1.0.0"
 
-# Known AI tool patterns
-# Format: nodes|key|name|agents_md|rules|commands|skills|subagents|color
+# 已知的 AI 工具設定模式
+# 格式：nodes|key|name|agents_md|rules|commands|skills|subagents|color
 declare -a KNOWN_PATTERNS=(
   ".amp|amp|Amp|AGENTS.md|rules|commands|skills|.|\\033[38;5;226m"
   ".augment|augment|Augment|AGENTS.md|rules|commands|.|agents|\\033[38;5;46m"
@@ -38,7 +38,7 @@ declare -a KNOWN_PATTERNS=(
   ".github|github|GitHub|copilot-instructions.md|.|.|skills|agents|\\033[38;5;240m"
 )
 
-# Colors
+# 顏色
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -51,7 +51,7 @@ log_ok() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Beautify a directory path
+# 美化目錄路徑顯示
 beautify_dir() {
   local path="$1"
   if [[ "$path" == "$HOME"* ]]; then
@@ -61,29 +61,29 @@ beautify_dir() {
   fi
 }
 
-# Log context mode info
+# 顯示執行環境資訊
 log_context_info() {
   local base_dir="$1"
 
-  local mode="system"
-  [[ "$base_dir" != "$HOME" ]] && mode="project"
+  local mode="系統"
+  [[ "$base_dir" != "$HOME" ]] && mode="專案"
 
-  log_info "Directory: $(beautify_dir "$base_dir") ($mode mode)"
+  log_info "目錄：$(beautify_dir "$base_dir")（${mode}模式）"
   echo ""
 }
 
-# Update: scan, merge, update symlinks
+# 更新：掃描、合併、更新 symlink
 update_links() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
 
-  log_info "Scanning AI tools..."
+  log_info "正在掃描 AI 工具..."
 
   local global_md_dir="$base_dir/.ai-global/global.md"
   local agents_md_dir="$base_dir/.ai-global/AGENTS.md"
   if [[ -f "$global_md_dir" ]] && [[ ! -f "$agents_md_dir" ]]; then
     mv "$global_md_dir" "$agents_md_dir"
-    log_ok "Renamed legacy global.md to AGENTS.md"
+    log_ok "已將舊版 global.md 重新命名為 AGENTS.md"
   fi
 
   local rules_dir="$base_dir/.ai-global/rules"
@@ -94,12 +94,12 @@ update_links() {
 
   local total_tools=0
 
-  # Create .ai-global directory if it doesn't exist
+  # 若 .ai-global 目錄不存在則建立
   if [[ ! -d "$base_dir/.ai-global" ]]; then
     mkdir -p "$base_dir/.ai-global"
   fi
 
-  # Record project if in project mode
+  # 在專案模式下記錄專案路徑
   if [[ "$base_dir" != "$HOME" ]]; then
     local projects_file="$HOME/.ai-global/projects"
     mkdir -p "$(dirname "$projects_file")"
@@ -110,14 +110,14 @@ update_links() {
     fi
   fi
 
-  # Handle AGENTS.md
+  # 處理 AGENTS.md
   local is_new_agents_md=false
   if [[ ! -L "$agents_md_dir" ]] && [[ ! -f "$agents_md_dir" ]]; then
     touch "$agents_md_dir"
     is_new_agents_md=true
   fi
 
-  # Create directories
+  # 建立目錄
   mkdir -p "$rules_dir" "$commands_dir" "$skills_dir" "$subagents_dir" "$backups_dir"
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
@@ -131,7 +131,7 @@ update_links() {
         total_tools=$((total_tools + 1))
 
         echo ""
-        echo -e "${GREEN}[OK]${NC} ${color}Found: $name${NC}"
+        echo -e "${GREEN}[OK]${NC} ${color}找到：$name${NC}"
 
         local types=("file:$agents_md:$agents_md_dir" "dir:$rules:$rules_dir" "dir:$commands:$commands_dir" "dir:$skills:$skills_dir" "dir:$subagents:$subagents_dir")
 
@@ -141,16 +141,16 @@ update_links() {
           if [[ "$type_node" != "." ]]; then
             local type_dir="$tool_dir/$type_node"
 
-            # If not symlink, create symlink
+            # 若非 symlink，則建立 symlink
             if [[ ! -L "$type_dir" ]]; then
-              # If dir exists, backup & copy & remove
+              # 若目錄已存在，備份、複製、移除
               if [[ -e "$type_dir" ]]; then
-                # Backup
+                # 備份
                 local backup_file="$backups_dir/${tool_node//\//_}.${type_node//\//_}.backup"
                 cp -r "$type_dir" "$backup_file" 2> /dev/null
 
                 if [[ "$type_key" == "file" ]]; then
-                  # Copy
+                  # 複製
                   if [[ "$is_new_agents_md" == true ]]; then
                     mkdir -p "$(dirname "$target_dir")" 2> /dev/null
                     echo "<!-- $name -->" >> "$target_dir"
@@ -159,14 +159,14 @@ update_links() {
                     echo "" >> "$target_dir"
                   fi
                 else
-                  # Warn if shared target already has files from other tools
+                  # 若共用目錄已有其他工具的檔案，發出警告
                   local existing_count=$(find "$target_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
                   if [[ "$existing_count" -gt 0 ]]; then
-                    log_warn "Shared directory $(beautify_dir "$target_dir") already has $existing_count file(s)"
-                    log_warn "Files from ${color}$name${NC}${YELLOW} will be merged into the shared directory${NC}"
+                    log_warn "共用目錄 $(beautify_dir "$target_dir") 已有 $existing_count 個檔案"
+                    log_warn "來自 ${color}$name${NC}${YELLOW} 的檔案將合併至共用目錄${NC}"
                   fi
 
-                  # Copy all files (overwrite if exists)
+                  # 複製所有檔案（若存在則覆蓋）
                   find "$type_dir" -type f -print0 2> /dev/null | while IFS= read -r -d '' file_dir; do
                     local target_file="$target_dir/${file_dir#$type_dir/}"
                     mkdir -p "$(dirname "$target_file")" 2> /dev/null
@@ -174,15 +174,15 @@ update_links() {
                   done
                 fi
 
-                # Remove
+                # 移除
                 rm -rf "$type_dir"
               fi
 
-              # Create symlink whether exists or not
+              # 無論是否存在都建立 symlink
               ln -s "$target_dir" "$type_dir"
             fi
 
-            # Print symlink
+            # 顯示 symlink
             local src_dir=$(beautify_dir "$type_dir")
             local tgt_dir=$(beautify_dir "$target_dir")
             local src_spaces=$((40 - ${#src_dir}))
@@ -198,11 +198,11 @@ update_links() {
 
   echo ""
 
-  # Check if any tools were found
+  # 檢查是否找到任何工具
   if [[ $total_tools -eq 0 ]]; then
-    log_info "No AI tool configs found"
-    log_info "Create an AI tool config directory in this project (e.g., .cursor/ or .claude/), then run again"
-    # Remove empty .ai-global directory
+    log_info "未找到任何 AI 工具設定"
+    log_info "請在專案中建立 AI 工具設定目錄（如 .cursor/ 或 .claude/），然後重新執行"
+    # 移除空的 .ai-global 目錄
     rm -rf "$base_dir/.ai-global" 2> /dev/null
     echo ""
     return
@@ -211,28 +211,28 @@ update_links() {
   if [[ "$is_new_agents_md" == true ]]; then
     if [[ -f "$agents_md_dir" ]] && ! grep -q '[^[:space:]]' "$agents_md_dir" 2> /dev/null; then
       cat > "$agents_md_dir" << 'EOF'
-# AI Coding Assistant
+# AI 程式助手
 
-<!-- Add your prompts here. They will sync to all AI tools. -->
+<!-- 在此加入您的提示詞，將同步至所有 AI 工具。 -->
 EOF
     fi
-    log_info "Merged AGENTS.md: $(beautify_dir "$agents_md_dir")"
+    log_info "已合併 AGENTS.md：$(beautify_dir "$agents_md_dir")"
   else
-    log_info "Skipped merge: $(beautify_dir "$agents_md_dir") (already exists)"
+    log_info "跳過合併：$(beautify_dir "$agents_md_dir")（已存在）"
   fi
 
-  log_ok "Done!"
+  log_ok "完成！"
   echo ""
 }
 
-# Show symlink status
+# 顯示 symlink 狀態
 show_status() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
 
   total_links=0
 
-  # Check and add symlink to output
+  # 檢查並加入 symlink 輸出
   add_status_output() {
     local color="$1"
     local tool_dir="$2"
@@ -277,7 +277,7 @@ show_status() {
   done
 
   if [[ $total_links -eq 0 ]]; then
-    echo "  No symlinks found"
+    echo "  未找到任何 symlink"
     echo ""
     return
   fi
@@ -293,12 +293,12 @@ show_status() {
   done
 }
 
-# List supported tools
+# 列出支援的工具
 list_tools() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
 
-  echo -e "  ${BLUE}Tool             Key          Directory                    AGENTS.md Rules Commands Skills Agents Status${NC}"
+  echo -e "  ${BLUE}工具             Key          目錄                          AGENTS.md Rules Commands Skills Agents 狀態${NC}"
   echo -e "  ${BLUE}-----------------------------------------------------------------------------------------------------------${NC}"
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
@@ -306,14 +306,14 @@ list_tools() {
     IFS=', ' read -ra node_array <<< "$nodes"
 
     local row_color="${GRAY}"
-    local status="Not found"
+    local status="未找到"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
 
       if [[ -d "$tool_dir" ]]; then
         row_color="$color"
-        status="Installed"
+        status="已安裝"
         break
       fi
     done
@@ -338,7 +338,7 @@ list_tools() {
   echo ""
 }
 
-# List available backups
+# 列出可用備份
 list_backups() {
   local base_dir="$(pwd)"
   log_context_info "$base_dir"
@@ -347,12 +347,12 @@ list_backups() {
   local backups_list=$(find "$backups_dir" -maxdepth 1 -name "*.backup" 2> /dev/null | sort)
 
   if [[ -z "$backups_list" ]]; then
-    echo "  No backups found"
+    echo "  未找到任何備份"
     echo ""
     return
   fi
 
-  echo -e "  ${BLUE}Backup File${NC}"
+  echo -e "  ${BLUE}備份檔案${NC}"
   echo "  ----------------------------------------------------------------------"
 
   while IFS= read -r backup_dir; do
@@ -363,7 +363,7 @@ list_backups() {
   echo ""
 }
 
-# Unlink a single tool
+# 取消連結單一工具
 unlink_one_tool() {
   local base_dir="$1"
   local tool_node="$2"
@@ -381,10 +381,10 @@ unlink_one_tool() {
       local type_dir="$base_dir/$tool_node/$type_node"
       if [[ -L "$type_dir" ]]; then
         rm "$type_dir"
-        log_ok "Unlinked: ${color}$(beautify_dir "$type_dir")${NC}"
+        log_ok "已取消連結：${color}$(beautify_dir "$type_dir")${NC}"
         ((unlinked_count++))
 
-        # Restore from backup
+        # 從備份還原
         local backup_file="$base_dir/.ai-global/backups/${tool_node//\//_}.${type_node//\//_}.backup"
         if [[ -e "$backup_file" ]]; then
           cp -r "$backup_file" "$type_dir" 2> /dev/null
@@ -393,7 +393,7 @@ unlink_one_tool() {
     fi
   done
 
-  # Delete tool backups
+  # 刪除工具備份
   local backups_dir="$base_dir/.ai-global/backups"
   [[ -d "$backups_dir" ]] && for backup_dir in "$backups_dir"/${tool_node//\//_}.*.backup; do
     [[ -e "$backup_dir" ]] && rm -rf "$backup_dir"
@@ -402,7 +402,7 @@ unlink_one_tool() {
   return $unlinked_count
 }
 
-# Unlink all tools
+# 取消連結所有工具
 unlink_all_tools() {
   local base_dir="$1"
   log_context_info "$base_dir"
@@ -424,18 +424,18 @@ unlink_all_tools() {
   done
 
   if [[ $total_unlinked -gt 0 ]]; then
-    log_ok "Unlinked all $total_unlinked symlinks"
+    log_ok "已取消連結全部 $total_unlinked 個 symlink"
   else
-    echo "  No symlinks found"
+    echo "  未找到任何 symlink"
   fi
 }
 
-# Unlink command
+# 取消連結指令
 unlink_tool() {
   local query_key="$1"
 
   if [[ -z "$query_key" ]]; then
-    log_error "Usage: ai-global unlink <key> or ai-global unlink all"
+    log_error "用法：ai-global unlink <key> 或 ai-global unlink all"
     echo ""
     return 1
   fi
@@ -448,7 +448,7 @@ unlink_tool() {
     return 0
   fi
 
-  # Find pattern by searching KNOWN_PATTERNS
+  # 從 KNOWN_PATTERNS 中搜尋匹配的模式
   local match=""
   for pattern in "${KNOWN_PATTERNS[@]}"; do
     IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
@@ -459,8 +459,8 @@ unlink_tool() {
   done
 
   if [[ -z "$match" ]]; then
-    log_error "Unknown tool: $query_key"
-    echo "Please use the correct <key>"
+    log_error "未知的工具：$query_key"
+    echo "請使用正確的 <key>"
     echo ""
     list_tools
     return 1
@@ -470,7 +470,7 @@ unlink_tool() {
 
   local has_found=false
 
-  # Parse pattern and unlink tool
+  # 解析模式並取消連結工具
   IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$match"
   IFS=', ' read -ra node_array <<< "$nodes"
 
@@ -482,36 +482,36 @@ unlink_tool() {
       unlink_one_tool "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents" "$color"
       local unlinked_count=$?
       if [[ $unlinked_count -gt 0 ]]; then
-        log_ok "Unlinked $unlinked_count symlinks from ${color}$(beautify_dir "$tool_dir")${NC}"
+        log_ok "已從 ${color}$(beautify_dir "$tool_dir")${NC} 取消連結 $unlinked_count 個 symlink"
       else
-        log_info "No symlinks found for ${color}$(beautify_dir "$tool_dir")${NC}"
+        log_info "${color}$(beautify_dir "$tool_dir")${NC} 未找到 symlink"
       fi
       echo ""
     fi
   done
 
   if [[ "$has_found" != true ]]; then
-    log_warn "Tool '$query_key' not found"
+    log_warn "未找到工具 '$query_key'"
     echo ""
   fi
 }
 
-# Parse GitHub reference to get owner, repo, and optional path
+# 解析 GitHub 參照，取得 owner、repo 及可選路徑
 parse_github_ref() {
   local input="$1"
 
-  # Remove https://github.com/ or github.com/ prefix
+  # 移除 https://github.com/ 或 github.com/ 前綴
   input="${input#https://github.com/}"
   input="${input#http://github.com/}"
   input="${input#github.com/}"
 
-  # Remove /blob/main/ or /blob/master/ or /tree/main/ etc
+  # 移除 /blob/main/ 或 /blob/master/ 或 /tree/main/ 等路徑
   input=$(echo "$input" | sed -E 's|/blob/[^/]+/|/|; s|/tree/[^/]+/|/|')
 
   echo "$input"
 }
 
-# Extract name from frontmatter (name: "...")
+# 從 frontmatter 中擷取名稱（name: "..."）
 extract_meta_name() {
   local file="$1"
   local default_name="$2"
@@ -519,7 +519,7 @@ extract_meta_name() {
     echo "$default_name"
     return
   fi
-  # Match name: "value" or name: value
+  # 匹配 name: "value" 或 name: value
   local extracted=$(grep -m 1 "^name:" "$file" | sed -E 's/^name:[[:space:]]*["'\'']?([^"'\'']+)["'\'']?/\1/' | xargs 2> /dev/null || true)
   if [[ -n "$extracted" ]]; then
     echo "$extracted"
@@ -528,7 +528,7 @@ extract_meta_name() {
   fi
 }
 
-# Download from GitHub
+# 從 GitHub 下載
 download_from_github() {
   local input="$1"
   local skills_dir="$2"
@@ -541,15 +541,15 @@ download_from_github() {
   local path=$(echo "$parsed" | cut -d'/' -f3-)
 
   if [[ -z "$owner" ]] || [[ -z "$repo" ]] || [[ -n "$path" ]]; then
-    log_error "Invalid GitHub reference: $input"
+    log_error "無效的 GitHub 參照：$input"
     return 1
   fi
 
-  # Clone entire repo or subdirectory
+  # 複製整個倉庫或子目錄
   local tmp_dir=$(mktemp -d)
   local clone_url="https://github.com/$owner/$repo.git"
 
-  log_info "Cloning: $clone_url"
+  log_info "正在複製：$clone_url"
 
   if git clone --depth 1 --single-branch "$clone_url" "$tmp_dir/$repo"; then
     echo ""
@@ -559,7 +559,7 @@ download_from_github() {
     if [[ -d "$source_node" ]]; then
       local meta_file="SKILL.md"
 
-      # 1. Check if root contains metadata file
+      # 1. 檢查根目錄是否包含中繼資料檔
       if [[ -f "$source_node/$meta_file" ]]; then
         local name=$(extract_meta_name "$source_node/$meta_file" "$(basename "$source_node")")
         local file_dir="$skills_dir/$name"
@@ -568,11 +568,11 @@ download_from_github() {
         skills_count=1
       fi
 
-      # 2. Check skills/ subdirectories
+      # 2. 檢查 skills/ 子目錄
       if [[ $skills_count -eq 0 ]] && [[ -z "$path" ]]; then
         for dir in skills skill; do
           if [[ -d "$source_node/$dir" ]]; then
-            # Search subdirectories containing SKILL.md
+            # 搜尋包含 SKILL.md 的子目錄
             for d in "$source_node/$dir"/*; do
               [[ ! -d "$d" ]] && continue
               if [[ -f "$d/$meta_file" ]]; then
@@ -585,7 +585,7 @@ download_from_github() {
             done
           fi
 
-          # If we found items, we are done with this dir
+          # 若已找到項目，則結束此目錄的搜尋
           if [[ $skills_count -gt 0 ]]; then
             source_node="$source_node/$dir"
             break
@@ -593,7 +593,7 @@ download_from_github() {
         done
       fi
 
-      # 3. Check src/ directory if still nothing
+      # 3. 若仍未找到，檢查 src/ 目錄
       if [[ $skills_count -eq 0 ]] && [[ -d "$source_node/src" ]]; then
         if [[ -f "$source_node/src/$meta_file" ]]; then
           local name=$(extract_meta_name "$source_node/src/$meta_file" "$(basename "$source_node")")
@@ -605,29 +605,29 @@ download_from_github() {
 
       if [[ $skills_count -gt 0 ]]; then
         echo ""
-        log_ok "Added $skills_count skills from $owner/$repo to $(beautify_dir "$skills_dir")"
+        log_ok "已從 $owner/$repo 新增 $skills_count 個 skill 至 $(beautify_dir "$skills_dir")"
       else
         local searched_dir="${source_node#$tmp_dir/$repo}"
         searched_dir="${searched_dir#/}"
-        log_warn "No skill found in $owner/$repo${searched_dir:+/$searched_dir}"
+        log_warn "在 $owner/$repo${searched_dir:+/$searched_dir} 中未找到 skill"
       fi
     else
-      log_error "Path not found: $path"
+      log_error "找不到路徑：$path"
       rm -rf "$tmp_dir"
       return 1
     fi
     rm -rf "$tmp_dir"
   else
     rm -rf "$tmp_dir"
-    log_error "Failed to clone: $clone_url"
+    log_error "複製失敗：$clone_url"
     return 1
   fi
 }
 
-# Check if input is a GitHub reference
+# 檢查輸入是否為 GitHub 參照
 not_github_ref() {
   local input="$1"
-  # Match: user/repo, https://github.com/user/repo, github.com/user/repo
+  # 匹配：user/repo、https://github.com/user/repo、github.com/user/repo
   if [[ "$input" =~ ^https?://github\.com/ ]] \
     || [[ "$input" =~ ^github\.com/ ]] \
     || [[ "$input" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+(/.*)?$ ]]; then
@@ -636,24 +636,24 @@ not_github_ref() {
   return 0
 }
 
-# Add skill to skills directory
+# 新增 skill 至 skills 目錄
 add_skill() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    log_error "Usage: ai-global add <user/repo>"
+    log_error "用法：ai-global add <user/repo>"
     echo ""
-    echo "Examples:"
+    echo "範例："
     echo "  ai-global add user/repo"
     echo "  ai-global add https://github.com/user/repo"
     return 1
   fi
 
-  # Check if it's a GitHub reference
+  # 檢查是否為 GitHub 參照
   if not_github_ref "$input"; then
-    log_error "Invalid input. Please provide a GitHub repository."
+    log_error "輸入無效，請提供 GitHub 倉庫。"
     echo ""
-    echo "Examples:"
+    echo "範例："
     echo "  ai-global add user/repo"
     echo "  ai-global add https://github.com/user/repo"
     return 1
@@ -668,45 +668,45 @@ add_skill() {
   download_from_github "$input" "$skills_dir"
 }
 
-# Upgrade
+# 升級
 upgrade() {
-  log_info "Checking for updates..."
+  log_info "正在檢查更新..."
 
   local remote_version
-  remote_version=$(curl -fsSL "https://raw.githubusercontent.com/nanxiaobei/ai-global/main/ai-global" 2> /dev/null | grep '^VERSION=' | head -1 | sed 's/VERSION="\([^"]*\)"/\1/')
+  remote_version=$(curl -fsSL "https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global" 2> /dev/null | grep '^VERSION=' | head -1 | sed 's/VERSION="\([^"]*\)"/\1/')
 
   if [[ -z "$remote_version" ]]; then
-    log_warn "Could not check for updates"
+    log_warn "無法檢查更新"
     return 1
   fi
 
   if [[ "$remote_version" == "$VERSION" ]]; then
-    log_ok "Already at latest version ($VERSION)"
+    log_ok "已是最新版本（$VERSION）"
     return 0
   fi
 
-  log_info "Upgrading: $VERSION -> $remote_version"
+  log_info "正在升級：$VERSION -> $remote_version"
 
   local current_script="$0"
-  # If running via symlink, update the target
+  # 若透過 symlink 執行，更新目標檔案
   if [[ -L "$current_script" ]]; then
     current_script=$(readlink "$current_script")
   fi
 
   local exec_temp=$(mktemp)
-  if curl -fsSL "https://raw.githubusercontent.com/nanxiaobei/ai-global/main/ai-global" -o "$exec_temp" 2> /dev/null; then
+  if curl -fsSL "https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global" -o "$exec_temp" 2> /dev/null; then
     chmod +x "$exec_temp"
     mv "$exec_temp" "$current_script"
 
-    log_ok "Upgraded to v$remote_version"
+    log_ok "已升級至 v$remote_version"
   else
     rm -f "$exec_temp"
-    log_error "Failed to download update"
+    log_error "下載更新失敗"
     return 1
   fi
 }
 
-# Backup all ai-global configs to .agents directory
+# 將所有 ai-global 設定備份至 .agents 目錄
 backup_to_agents_dir() {
   local base_dir="$1"
   local config_dir="$base_dir/.ai-global"
@@ -719,7 +719,7 @@ backup_to_agents_dir() {
   rm -rf "$config_backup_dir" 2> /dev/null
   mkdir -p "$config_backup_dir"
 
-  # Backup all
+  # 備份全部
   local types=("AGENTS.md" "skills" "rules" "agents" "commands")
 
   for type_node in "${types[@]}"; do
@@ -728,43 +728,43 @@ backup_to_agents_dir() {
     fi
   done
 
-  # Log backup result only if backup directory was created
+  # 僅在備份目錄建立成功時記錄結果
   if [[ -d "$config_backup_dir" ]]; then
-    log_ok "Backed up $(beautify_dir "$config_dir") to ${GREEN}$(beautify_dir "$config_backup_dir")${NC}"
+    log_ok "已將 $(beautify_dir "$config_dir") 備份至 ${GREEN}$(beautify_dir "$config_backup_dir")${NC}"
   fi
 }
 
-# Uninstall
+# 解除安裝
 uninstall() {
-  # Backup all configs to .agents directory
+  # 將所有設定備份至 .agents 目錄
   echo ""
   backup_to_agents_dir "$HOME"
   unlink_all_tools "$HOME"
   echo ""
 
-  # Find and clean up all project configs
+  # 尋找並清理所有專案設定
   local projects_file="$HOME/.ai-global/projects"
   if [[ ! -f "$projects_file" ]]; then
-    log_info "No project configs found"
+    log_info "未找到專案設定"
     echo ""
   else
-    log_info "Checking for project configs..."
+    log_info "正在檢查專案設定..."
     echo ""
 
     local project_count=0
 
     while IFS= read -r project_dir; do
       [[ -z "$project_dir" ]] && continue
-      # Only process if project directory actually exists
+      # 僅在專案目錄實際存在時處理
       if [[ -d "$project_dir" ]]; then
         if [[ -d "$project_dir/.ai-global" ]]; then
-          log_info "Found project: $(beautify_dir "$project_dir")"
+          log_info "找到專案：$(beautify_dir "$project_dir")"
           backup_to_agents_dir "$project_dir"
 
           (cd "$project_dir" && unlink_all_tools "$project_dir" 2> /dev/null || true)
 
           rm -rf "$project_dir/.ai-global"
-          log_ok "Removed project configuration: $(beautify_dir "$project_dir/.ai-global")"
+          log_ok "已移除專案設定：$(beautify_dir "$project_dir/.ai-global")"
           echo ""
 
           ((project_count++))
@@ -773,7 +773,7 @@ uninstall() {
     done < "$projects_file"
 
     if [[ $project_count -eq 0 ]]; then
-      log_info "No project configs found"
+      log_info "未找到專案設定"
       echo ""
     fi
   fi
@@ -782,48 +782,48 @@ uninstall() {
   [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f "$HOME/.local/bin/ai-global"
 
   rm -rf "$HOME/.ai-global"
-  log_ok "Removed system configuration: $(beautify_dir "$HOME/.ai-global")"
+  log_ok "已移除系統設定：$(beautify_dir "$HOME/.ai-global")"
 
-  log_ok "AI Global uninstalled successfully"
+  log_ok "AI Global 已成功解除安裝"
   echo ""
 }
 
-# Show version
+# 顯示版本
 show_version() {
-  echo "ai-global version $VERSION"
+  echo "ai-global 版本 $VERSION"
 }
 
-# Show help
+# 顯示說明
 show_help() {
-  echo -e "${BLUE}AI Global: Unified AI Tools Configuration Manager${NC} v$VERSION"
+  echo -e "${BLUE}AI Global：統一 AI 工具設定管理器${NC} v$VERSION"
   echo ""
-  echo -e "${BLUE}USAGE:${NC}"
-  echo -e "  ai-global [command]"
+  echo -e "${BLUE}用法：${NC}"
+  echo -e "  ai-global [指令]"
   echo ""
-  echo -e "${BLUE}CORE COMMANDS:${NC}"
-  echo -e "  ${GREEN}(default)${NC}           Scan, merge, update symlinks"
-  echo -e "  ${GREEN}status${NC}              Show symlinks status"
-  echo -e "  ${GREEN}list${NC}                List all supported AI tools"
-  echo -e "  ${GREEN}backups${NC}             List available backups"
-  echo -e "  ${GREEN}unlink <key>${NC}        Restore a tool's original config"
-  echo -e "  ${GREEN}unlink all${NC}          Restore all tools"
+  echo -e "${BLUE}核心指令：${NC}"
+  echo -e "  ${GREEN}（預設）${NC}            掃描、合併、更新 symlink"
+  echo -e "  ${GREEN}status${NC}              顯示 symlink 狀態"
+  echo -e "  ${GREEN}list${NC}                列出所有支援的 AI 工具"
+  echo -e "  ${GREEN}backups${NC}             列出可用備份"
+  echo -e "  ${GREEN}unlink <key>${NC}        還原工具的原始設定"
+  echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
   echo ""
-  echo -e "${BLUE}RESOURCE MANAGEMENT:${NC}"
-  echo -e "  ${GREEN}add <user/repo>${NC}     Add skills"
+  echo -e "${BLUE}資源管理：${NC}"
+  echo -e "  ${GREEN}add <user/repo>${NC}     新增 skill"
   echo ""
-  echo -e "${BLUE}SYSTEM COMMANDS:${NC}"
-  echo -e "  ${GREEN}upgrade${NC}             Upgrade to latest version"
-  echo -e "  ${GREEN}uninstall${NC}           Completely remove ai-global"
-  echo -e "  ${GREEN}version${NC}             Show version"
-  echo -e "  ${GREEN}help${NC}                Show this help"
+  echo -e "${BLUE}系統指令：${NC}"
+  echo -e "  ${GREEN}upgrade${NC}             升級至最新版本"
+  echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
+  echo -e "  ${GREEN}version${NC}             顯示版本"
+  echo -e "  ${GREEN}help${NC}                顯示此說明"
   echo ""
 }
 
-# Main
+# 主程式
 main() {
   local cmd="$1"
 
-  # Handle empty command
+  # 處理空指令
   if [[ -z "$cmd" ]]; then
     cmd="update"
   fi
@@ -841,7 +841,7 @@ main() {
     version | -v | --version) show_version ;;
     help | --help | -h) show_help ;;
     *)
-      log_error "Unknown command: $cmd"
+      log_error "未知的指令：$cmd"
       show_help
       exit 1
       ;;

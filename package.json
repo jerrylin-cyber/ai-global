@@ -1,12 +1,12 @@
 {
   "name": "ai-global",
-  "version": "2.6.2",
+  "version": "1.0.0",
   "description": "Unified configuration manager for AI coding assistants",
-  "author": "nanxiaobei",
-  "homepage": "https://github.com/nanxiaobei/ai-global#readme",
+  "author": "lazyjerry",
+  "homepage": "https://github.com/lazyjerry/ai-global#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nanxiaobei/ai-global.git"
+    "url": "git+https://github.com/lazyjerry/ai-global.git"
   },
   "license": "MIT",
   "keywords": [
