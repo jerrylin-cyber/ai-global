@@ -6,11 +6,22 @@
 
 > **Forked from [nanxiaobei/ai-global](https://github.com/nanxiaobei/ai-global)**. Thanks to the original author for the open-source contribution.
 
+### Differences from upstream
+
+This fork removes project mode and keeps only system mode.
+
+The original version switches between system/project mode based on which directory you run it from: `~` for system mode, anything else for project mode, creating an independent `.ai-global/` config under project directories. This version simplifies it to:
+
+- No more mode distinction — all commands run directly in the current directory
+- No longer writes project paths to `~/.ai-global/projects`
+- Removed the project mode confirmation prompt
+- Uninstall no longer cleans up individual project configs
+
+If you need per-project AI configs, use the [upstream version](https://github.com/nanxiaobei/ai-global).
+
 **Unified Configuration Manager for AI Coding Tools.**
 
 Edit one file, sync to all your AI tools.
-
-Works both **System Mode** & **Project Mode**
 
 ## Installation
 
@@ -34,13 +45,6 @@ bun add -g ai-global
 
 ## Usage
 
-### Automatic Mode Detection
-
-AI Global automatically detects your context:
-
-- **System Mode**: When run from `~` directory, unified configs for system-wide
-- **Project Mode**: When run from any project directory (not `~`), unified configs for project-specific
-
 ### First run
 
 ```bash
@@ -49,31 +53,28 @@ ai-global
 
 This will:
 
-1. Detect current directory (system or project)
-2. Scan for installed AI tools
-3. Backup original configs to `.ai-global/backups/`
-4. Merge AGENTS.md/skills/agents/rules/commands from detected tools
-5. Create symlinks from each tool's config to shared directories
+1. Scan for installed AI tools
+2. Backup original configs to `.ai-global/backups/`
+3. Merge AGENTS.md/skills/agents/rules/commands from detected tools
+4. Create symlinks from each tool's config to shared directories
 
 Note: AI Global only handles tool directories that already exist. It does not create directories like `.github`, `.kiro`, or `.cursor` for you.
 
 ## Commands
 
-| Command                     | Description                            | Context-aware |
-| --------------------------- | -------------------------------------- | ------------- |
-| `ai-global`                 | Scan, merge, update symlinks (default) | Yes           |
-| `ai-global status`          | Show symlinks status                   | Yes           |
-| `ai-global list`            | List all supported AI tools            | Yes           |
-| `ai-global backups`         | List available backups                 | Yes           |
-| `ai-global unlink <key>`    | Restore a tool's original config       | Yes           |
-| `ai-global unlink all`      | Restore all tools                      | Yes           |
-| `ai-global add <user/repo>` | Add skills from GitHub repository      | Yes           |
-| `ai-global upgrade`         | Upgrade to latest version              |               |
-| `ai-global uninstall`       | Completely remove ai-global            |               |
-| `ai-global version`         | Show version                           |               |
-| `ai-global help`            | Show help                              |               |
-
-**Context-aware**: Command behavior depends on current directory (system vs project)
+| Command                     | Description                            |
+| --------------------------- | -------------------------------------- |
+| `ai-global`                 | Scan, merge, update symlinks (default) |
+| `ai-global status`          | Show symlinks status                   |
+| `ai-global list`            | List all supported AI tools            |
+| `ai-global backups`         | List available backups                 |
+| `ai-global unlink <key>`    | Restore a tool's original config       |
+| `ai-global unlink all`      | Restore all tools                      |
+| `ai-global add <user/repo>` | Add skills from GitHub repository      |
+| `ai-global upgrade`         | Upgrade to latest version              |
+| `ai-global uninstall`       | Completely remove ai-global            |
+| `ai-global version`         | Show version                           |
+| `ai-global help`            | Show help                              |
 
 ### Add skills
 
@@ -86,7 +87,7 @@ Skills will be downloaded and added to your `.ai-global/skills/` directory.
 
 ## How it works
 
-### System Mode Structure
+### Directory Structure
 
 ```
 ~/.ai-global/
@@ -108,29 +109,6 @@ Skills will be downloaded and added to your `.ai-global/skills/` directory.
 
 ... and more tools
 ```
-
-### Project Mode Structure
-
-```
-my-project/
-├── .ai-global/          <- Project-specific configs
-│   ├── AGENTS.md        <- Project AGENTS.md
-│   ├── skills/          <- Project skills
-│   ├── agents/          <- Project agents
-│   ├── rules/           <- Project rules
-│   ├── commands/        <- Project commands
-│   └── backups/         <- Project backups
-└── .cursor/             <- AI tool config
-    ├── AGENTS.md -> ../.ai-global/AGENTS.md   (symlink)
-    └── skills/   -> ../.ai-global/skills/     (symlink)
-```
-
-### Mode Behavior
-
-- **System Mode**: Manages AI configs across your entire system
-- **Project Mode**: Manages AI configs for a specific project only
-- **Automatic Detection**: No commands needed to switch between modes
-- **Context-Aware**: Commands will show which context they're operating in
 
 ### Merge behavior
 

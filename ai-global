@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="1.0.1"
+VERSION="2.0.0"
 
 # 遠端腳本位址
 REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
@@ -67,22 +67,7 @@ beautify_dir() {
 # 顯示執行環境資訊
 log_context_info() {
   local base_dir="$1"
-
-  local mode="全域"
-  [[ "$base_dir" != "$HOME" ]] && mode="專案"
-
-  log_info "目錄：$(beautify_dir "$base_dir")（${mode}模式）"
-
-  # 專案模式下與使用者確認
-  if [[ "$base_dir" != "$HOME" ]]; then
-    local confirm
-    read -r -p "$(echo -e "${YELLOW}[WARN]${NC}") 目前路徑為專案模式，是否繼續動作？[y/N] " confirm
-    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-      log_info "已取消操作"
-      return 1
-    fi
-  fi
-
+  log_info "目錄：$(beautify_dir "$base_dir")"
   echo ""
 }
 
@@ -111,17 +96,6 @@ update_links() {
   # 若 .ai-global 目錄不存在則建立
   if [[ ! -d "$base_dir/.ai-global" ]]; then
     mkdir -p "$base_dir/.ai-global"
-  fi
-
-  # 在專案模式下記錄專案路徑
-  if [[ "$base_dir" != "$HOME" ]]; then
-    local projects_file="$HOME/.ai-global/projects"
-    mkdir -p "$(dirname "$projects_file")"
-    if [[ ! -f "$projects_file" ]]; then
-      echo "$base_dir" > "$projects_file"
-    elif ! grep -Fxq "$base_dir" "$projects_file" 2> /dev/null; then
-      echo "$base_dir" >> "$projects_file"
-    fi
   fi
 
   # 處理 AGENTS.md
@@ -758,42 +732,6 @@ uninstall() {
   backup_to_agents_dir "$HOME"
   unlink_all_tools "$HOME"
   echo ""
-
-  # 尋找並清理所有專案設定
-  local projects_file="$HOME/.ai-global/projects"
-  if [[ ! -f "$projects_file" ]]; then
-    log_info "未找到專案設定"
-    echo ""
-  else
-    log_info "正在檢查專案設定..."
-    echo ""
-
-    local project_count=0
-
-    while IFS= read -r project_dir; do
-      [[ -z "$project_dir" ]] && continue
-      # 僅在專案目錄實際存在時處理
-      if [[ -d "$project_dir" ]]; then
-        if [[ -d "$project_dir/.ai-global" ]]; then
-          log_info "找到專案：$(beautify_dir "$project_dir")"
-          backup_to_agents_dir "$project_dir"
-
-          unlink_all_tools "$project_dir" 2> /dev/null || true
-
-          rm -rf -- "$project_dir/.ai-global"
-          log_ok "已移除專案設定：$(beautify_dir "$project_dir/.ai-global")"
-          echo ""
-
-          ((project_count++))
-        fi
-      fi
-    done < "$projects_file"
-
-    if [[ $project_count -eq 0 ]]; then
-      log_info "未找到專案設定"
-      echo ""
-    fi
-  fi
 
   [[ -L /usr/local/bin/ai-global ]] && rm -f -- /usr/local/bin/ai-global
   [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f -- "$HOME/.local/bin/ai-global"
