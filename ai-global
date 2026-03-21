@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # 遠端腳本位址
 REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
@@ -99,13 +99,7 @@ update_links() {
 
   log_info "正在掃描 AI 工具..."
 
-  local global_md_dir="$base_dir/.ai-global/global.md"
   local agents_md_dir="$base_dir/.ai-global/AGENTS.md"
-  if [[ -f "$global_md_dir" ]] && [[ ! -f "$agents_md_dir" ]]; then
-    mv -- "$global_md_dir" "$agents_md_dir"
-    log_ok "已將舊版 global.md 重新命名為 AGENTS.md"
-  fi
-
   local rules_dir="$base_dir/.ai-global/rules"
   local commands_dir="$base_dir/.ai-global/commands"
   local skills_dir="$base_dir/.ai-global/skills"
