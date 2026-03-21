@@ -72,6 +72,12 @@ log_context_info() {
   echo ""
 }
 
+# 解析工具模式字串
+parse_pattern() {
+  IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$1"
+  IFS=', ' read -ra node_array <<< "$nodes"
+}
+
 # 更新：掃描、合併、更新 symlink
 update_links() {
   local base_dir=$(pwd)
@@ -82,7 +88,7 @@ update_links() {
   local global_md_dir="$base_dir/.ai-global/global.md"
   local agents_md_dir="$base_dir/.ai-global/AGENTS.md"
   if [[ -f "$global_md_dir" ]] && [[ ! -f "$agents_md_dir" ]]; then
-    mv "$global_md_dir" "$agents_md_dir"
+    mv -- "$global_md_dir" "$agents_md_dir"
     log_ok "已將舊版 global.md 重新命名為 AGENTS.md"
   fi
 
@@ -121,8 +127,7 @@ update_links() {
   mkdir -p "$rules_dir" "$commands_dir" "$skills_dir" "$subagents_dir" "$backups_dir"
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
-    IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
-    IFS=', ' read -ra node_array <<< "$nodes"
+    parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
@@ -133,10 +138,14 @@ update_links() {
         echo ""
         echo -e "${GREEN}[OK]${NC} ${color}找到：$name${NC}"
 
-        local types=("file:$agents_md:$agents_md_dir" "dir:$rules:$rules_dir" "dir:$commands:$commands_dir" "dir:$skills:$skills_dir" "dir:$subagents:$subagents_dir")
+        local _type_keys=("file" "dir" "dir" "dir" "dir")
+        local _type_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
+        local _type_targets=("$agents_md_dir" "$rules_dir" "$commands_dir" "$skills_dir" "$subagents_dir")
 
-        for type_info in "${types[@]}"; do
-          IFS=':' read -r type_key type_node target_dir <<< "$type_info"
+        for _ti in "${!_type_keys[@]}"; do
+          local type_key="${_type_keys[$_ti]}"
+          local type_node="${_type_nodes[$_ti]}"
+          local target_dir="${_type_targets[$_ti]}"
 
           if [[ "$type_node" != "." ]]; then
             local type_dir="$tool_dir/$type_node"
@@ -147,20 +156,21 @@ update_links() {
               if [[ -e "$type_dir" ]]; then
                 # 備份
                 local backup_file="$backups_dir/${tool_node//\//_}.${type_node//\//_}.backup"
-                cp -r "$type_dir" "$backup_file" 2> /dev/null
+                cp -r -- "$type_dir" "$backup_file" 2> /dev/null
 
                 if [[ "$type_key" == "file" ]]; then
                   # 複製
                   if [[ "$is_new_agents_md" == true ]]; then
                     mkdir -p "$(dirname "$target_dir")" 2> /dev/null
                     echo "<!-- $name -->" >> "$target_dir"
-                    cat "$type_dir" >> "$target_dir"
+                    cat -- "$type_dir" >> "$target_dir"
                     echo "" >> "$target_dir"
                     echo "" >> "$target_dir"
                   fi
                 else
                   # 若共用目錄已有其他工具的檔案，發出警告
-                  local existing_count=$(find "$target_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
+                  local existing_count
+                  existing_count=$(find "$target_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
                   if [[ "$existing_count" -gt 0 ]]; then
                     log_warn "共用目錄 $(beautify_dir "$target_dir") 已有 $existing_count 個檔案"
                     log_warn "來自 ${color}$name${NC}${YELLOW} 的檔案將合併至共用目錄${NC}"
@@ -170,16 +180,16 @@ update_links() {
                   find "$type_dir" -type f -print0 2> /dev/null | while IFS= read -r -d '' file_dir; do
                     local target_file="$target_dir/${file_dir#$type_dir/}"
                     mkdir -p "$(dirname "$target_file")" 2> /dev/null
-                    cp "$file_dir" "$target_file" 2> /dev/null || true
+                    cp -- "$file_dir" "$target_file" 2> /dev/null || true
                   done
                 fi
 
                 # 移除
-                rm -rf "$type_dir"
+                rm -rf -- "$type_dir"
               fi
 
               # 無論是否存在都建立 symlink
-              ln -s "$target_dir" "$type_dir"
+              ln -s -- "$target_dir" "$type_dir"
             fi
 
             # 顯示 symlink
@@ -203,7 +213,7 @@ update_links() {
     log_info "未找到任何 AI 工具設定"
     log_info "請在專案中建立 AI 工具設定目錄（如 .cursor/ 或 .claude/），然後重新執行"
     # 移除空的 .ai-global 目錄
-    rm -rf "$base_dir/.ai-global" 2> /dev/null
+    rm -rf -- "$base_dir/.ai-global" 2> /dev/null
     echo ""
     return
   fi
@@ -230,47 +240,44 @@ show_status() {
   local base_dir=$(pwd)
   log_context_info "$base_dir"
 
-  total_links=0
+  local total_links=0
 
-  # 檢查並加入 symlink 輸出
-  add_status_output() {
-    local color="$1"
-    local tool_dir="$2"
-    local type_node="$3"
-    local out_var="$4"
-
-    if [[ "$type_node" != "." ]]; then
-      local type_dir="$tool_dir/$type_node"
-      if [[ -L "$type_dir" ]]; then
-        local target_dir=$(readlink "$type_dir" 2> /dev/null || true)
-        if [[ "$target_dir" == *".ai-global"* ]]; then
-          local beautified=$(beautify_dir "$type_dir")
-          eval "$out_var+=\"  ${color}${beautified}${NC}\n\""
-          total_links=$((total_links + 1))
-        fi
-      fi
-    fi
-  }
-
-  local agents_md_output=""
-  local rules_output=""
-  local commands_output=""
-  local skills_output=""
-  local subagents_output=""
+  local _so_agents_md="" _so_rules="" _so_commands="" _so_skills="" _so_subagents=""
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
-    IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
-    IFS=', ' read -ra node_array <<< "$nodes"
+    parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
 
       if [[ -d "$tool_dir" ]]; then
-        local types=("$agents_md:agents_md_output" "$rules:rules_output" "$commands:commands_output" "$skills:skills_output" "$subagents:subagents_output")
+        local _stype_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
+        local _stype_keys=("agents_md" "rules" "commands" "skills" "subagents")
 
-        for type_info in "${types[@]}"; do
-          IFS=':' read -r type_node output_var <<< "$type_info"
-          add_status_output "$color" "$tool_dir" "$type_node" "$output_var"
+        for _si in "${!_stype_nodes[@]}"; do
+          local type_node="${_stype_nodes[$_si]}"
+          local output_key="${_stype_keys[$_si]}"
+
+          if [[ "$type_node" != "." ]]; then
+            local type_dir="$tool_dir/$type_node"
+            if [[ -L "$type_dir" ]]; then
+              local target_dir
+              target_dir=$(readlink "$type_dir" 2> /dev/null || true)
+              if [[ "$target_dir" == *".ai-global"* ]]; then
+                local beautified
+                beautified=$(beautify_dir "$type_dir")
+                local _line="  ${color}${beautified}${NC}\n"
+                case "$output_key" in
+                  agents_md) _so_agents_md+="$_line" ;;
+                  rules) _so_rules+="$_line" ;;
+                  commands) _so_commands+="$_line" ;;
+                  skills) _so_skills+="$_line" ;;
+                  subagents) _so_subagents+="$_line" ;;
+                esac
+                total_links=$((total_links + 1))
+              fi
+            fi
+          fi
         done
       fi
     done
@@ -282,12 +289,13 @@ show_status() {
     return
   fi
 
-  local types=("AGENTS.md:$agents_md_output" "rules:$rules_output" "commands:$commands_output" "skills:$skills_output" "agents:$subagents_output")
+  local _titles=("AGENTS.md" "rules" "commands" "skills" "agents")
+  local _contents=("$_so_agents_md" "$_so_rules" "$_so_commands" "$_so_skills" "$_so_subagents")
 
-  for type_info in "${types[@]}"; do
-    IFS=':' read -r title content <<< "$type_info"
+  for _si in "${!_titles[@]}"; do
+    local content="${_contents[$_si]}"
     if [[ -n "$content" ]]; then
-      echo -e "${BLUE}[$title]${NC}"
+      echo -e "${BLUE}[${_titles[$_si]}]${NC}"
       echo -e -n "$content\n"
     fi
   done
@@ -302,8 +310,7 @@ list_tools() {
   echo -e "  ${BLUE}-----------------------------------------------------------------------------------------------------------${NC}"
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
-    IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
-    IFS=', ' read -ra node_array <<< "$nodes"
+    parse_pattern "$pattern"
 
     local row_color="${GRAY}"
     local status="未找到"
@@ -318,22 +325,7 @@ list_tools() {
       fi
     done
 
-    local name_spaces=$((17 - ${#name}))
-    name_spaces=$((name_spaces > 0 ? name_spaces : 1))
-    local name_pad="                    "
-    name_pad="${name_pad:0:$name_spaces}"
-
-    local key_pad=$((13 - ${#key}))
-    key_pad=$((key_pad > 0 ? key_pad : 1))
-    local key_spacing="            "
-    key_spacing="${key_spacing:0:$key_pad}"
-
-    local nodes_spaces=$((31 - ${#nodes}))
-    nodes_spaces=$((nodes_spaces > 0 ? nodes_spaces : 1))
-    local nodes_pad="                               "
-    nodes_pad="${nodes_pad:0:$nodes_spaces}"
-
-    echo -e "  ${row_color}${name}${name_pad}${key}${key_spacing}${nodes}${nodes_pad} $([[ "$agents_md" == "." ]] && echo "." || echo "○")        $([[ "$rules" == "." ]] && echo "." || echo "○")      $([[ "$commands" == "." ]] && echo "." || echo "○")       $([[ "$skills" == "." ]] && echo "." || echo "○")      $([[ "$subagents" == "." ]] && echo "." || echo "○")    ${status}${NC}"
+    echo -e "  ${row_color}$(printf '%-17s %-13s %-31s' "$name" "$key" "$nodes") $([[ "$agents_md" == "." ]] && echo "." || echo "○")        $([[ "$rules" == "." ]] && echo "." || echo "○")      $([[ "$commands" == "." ]] && echo "." || echo "○")       $([[ "$skills" == "." ]] && echo "." || echo "○")      $([[ "$subagents" == "." ]] && echo "." || echo "○")    ${status}${NC}"
   done
   echo ""
 }
@@ -380,14 +372,14 @@ unlink_one_tool() {
     if [[ "$type_node" != "." ]]; then
       local type_dir="$base_dir/$tool_node/$type_node"
       if [[ -L "$type_dir" ]]; then
-        rm "$type_dir"
+        rm -- "$type_dir"
         log_ok "已取消連結：${color}$(beautify_dir "$type_dir")${NC}"
         ((unlinked_count++))
 
         # 從備份還原
         local backup_file="$base_dir/.ai-global/backups/${tool_node//\//_}.${type_node//\//_}.backup"
         if [[ -e "$backup_file" ]]; then
-          cp -r "$backup_file" "$type_dir" 2> /dev/null
+          cp -r -- "$backup_file" "$type_dir" 2> /dev/null
         fi
       fi
     fi
@@ -396,10 +388,10 @@ unlink_one_tool() {
   # 刪除工具備份
   local backups_dir="$base_dir/.ai-global/backups"
   [[ -d "$backups_dir" ]] && for backup_dir in "$backups_dir"/${tool_node//\//_}.*.backup; do
-    [[ -e "$backup_dir" ]] && rm -rf "$backup_dir"
+    [[ -e "$backup_dir" ]] && rm -rf -- "$backup_dir"
   done
 
-  return $unlinked_count
+  _UNLINK_COUNT=$unlinked_count
 }
 
 # 取消連結所有工具
@@ -410,15 +402,14 @@ unlink_all_tools() {
   local total_unlinked=0
 
   for pattern in "${KNOWN_PATTERNS[@]}"; do
-    IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
-    IFS=', ' read -ra node_array <<< "$nodes"
+    parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
 
       if [[ -d "$tool_dir" ]]; then
         unlink_one_tool "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents" "$color"
-        total_unlinked=$((total_unlinked + $?))
+        total_unlinked=$((total_unlinked + _UNLINK_COUNT))
       fi
     done
   done
@@ -451,7 +442,7 @@ unlink_tool() {
   # 從 KNOWN_PATTERNS 中搜尋匹配的模式
   local match=""
   for pattern in "${KNOWN_PATTERNS[@]}"; do
-    IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$pattern"
+    parse_pattern "$pattern"
     if [[ "$key" == "$query_key" ]]; then
       match="$pattern"
       break
@@ -471,8 +462,7 @@ unlink_tool() {
   local has_found=false
 
   # 解析模式並取消連結工具
-  IFS='|' read -r nodes key name agents_md rules commands skills subagents color <<< "$match"
-  IFS=', ' read -ra node_array <<< "$nodes"
+  parse_pattern "$match"
 
   for tool_node in "${node_array[@]}"; do
     local tool_dir="$base_dir/$tool_node"
@@ -480,7 +470,7 @@ unlink_tool() {
     if [[ -d "$tool_dir" ]]; then
       has_found=true
       unlink_one_tool "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents" "$color"
-      local unlinked_count=$?
+      local unlinked_count=$_UNLINK_COUNT
       if [[ $unlinked_count -gt 0 ]]; then
         log_ok "已從 ${color}$(beautify_dir "$tool_dir")${NC} 取消連結 $unlinked_count 個 symlink"
       else
@@ -535,18 +525,28 @@ download_from_github() {
 
   local skills_count=0
 
-  local parsed=$(parse_github_ref "$input")
-  local owner=$(echo "$parsed" | cut -d'/' -f1)
-  local repo=$(echo "$parsed" | cut -d'/' -f2)
-  local path=$(echo "$parsed" | cut -d'/' -f3-)
+  local parsed
+  parsed=$(parse_github_ref "$input")
+  local owner
+  owner=$(echo "$parsed" | cut -d'/' -f1)
+  local repo
+  repo=$(echo "$parsed" | cut -d'/' -f2)
+  local path
+  path=$(echo "$parsed" | cut -d'/' -f3-)
 
-  if [[ -z "$owner" ]] || [[ -z "$repo" ]] || [[ -n "$path" ]]; then
+  if [[ -z "$owner" ]] || [[ -z "$repo" ]]; then
     log_error "無效的 GitHub 參照：$input"
     return 1
   fi
 
+  if [[ -n "$path" ]]; then
+    log_error "不支援子路徑，僅接受 user/repo 格式：$input"
+    return 1
+  fi
+
   # 複製整個倉庫或子目錄
-  local tmp_dir=$(mktemp -d)
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
   local clone_url="https://github.com/$owner/$repo.git"
 
   log_info "正在複製：$clone_url"
@@ -563,8 +563,8 @@ download_from_github() {
       if [[ -f "$source_node/$meta_file" ]]; then
         local name=$(extract_meta_name "$source_node/$meta_file" "$(basename "$source_node")")
         local file_dir="$skills_dir/$name"
-        mkdir -p "$file_dir"
-        cp -R "$source_node"/* "$file_dir/"
+        mkdir -p -- "$file_dir"
+        cp -R -- "$source_node"/* "$file_dir/"
         skills_count=1
       fi
 
@@ -577,8 +577,8 @@ download_from_github() {
               [[ ! -d "$d" ]] && continue
               if [[ -f "$d/$meta_file" ]]; then
                 local name=$(extract_meta_name "$d/$meta_file" "$(basename "$d")")
-                mkdir -p "$skills_dir/$name"
-                cp -R "$d"/* "$skills_dir/$name/"
+                mkdir -p -- "$skills_dir/$name"
+                cp -R -- "$d"/* "$skills_dir/$name/"
                 echo "  - $name"
                 ((skills_count++))
               fi
@@ -597,8 +597,8 @@ download_from_github() {
       if [[ $skills_count -eq 0 ]] && [[ -d "$source_node/src" ]]; then
         if [[ -f "$source_node/src/$meta_file" ]]; then
           local name=$(extract_meta_name "$source_node/src/$meta_file" "$(basename "$source_node")")
-          mkdir -p "$skills_dir/$name"
-          cp -R "$source_node/src"/* "$skills_dir/$name/"
+          mkdir -p -- "$skills_dir/$name"
+          cp -R -- "$source_node/src"/* "$skills_dir/$name/"
           skills_count=1
         fi
       fi
@@ -613,12 +613,12 @@ download_from_github() {
       fi
     else
       log_error "找不到路徑：$path"
-      rm -rf "$tmp_dir"
+      rm -rf -- "$tmp_dir"
       return 1
     fi
-    rm -rf "$tmp_dir"
+    rm -rf -- "$tmp_dir"
   else
-    rm -rf "$tmp_dir"
+    rm -rf -- "$tmp_dir"
     log_error "複製失敗：$clone_url"
     return 1
   fi
@@ -693,14 +693,23 @@ upgrade() {
     current_script=$(readlink "$current_script")
   fi
 
-  local exec_temp=$(mktemp)
+  local exec_temp
+  exec_temp=$(mktemp)
   if curl -fsSL "https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global" -o "$exec_temp" 2> /dev/null; then
     chmod +x "$exec_temp"
-    mv "$exec_temp" "$current_script"
+
+    # 驗證下載的檔案是否為有效腳本
+    if ! head -1 "$exec_temp" | grep -q '^#!/bin/bash'; then
+      rm -f -- "$exec_temp"
+      log_error "下載的檔案不是有效的腳本"
+      return 1
+    fi
+
+    mv -- "$exec_temp" "$current_script"
 
     log_ok "已升級至 v$remote_version"
   else
-    rm -f "$exec_temp"
+    rm -f -- "$exec_temp"
     log_error "下載更新失敗"
     return 1
   fi
@@ -716,15 +725,15 @@ backup_to_agents_dir() {
   fi
 
   local config_backup_dir="$base_dir/.agents_ai-global"
-  rm -rf "$config_backup_dir" 2> /dev/null
-  mkdir -p "$config_backup_dir"
+  rm -rf -- "$config_backup_dir" 2> /dev/null
+  mkdir -p -- "$config_backup_dir"
 
   # 備份全部
   local types=("AGENTS.md" "skills" "rules" "agents" "commands")
 
   for type_node in "${types[@]}"; do
     if [[ -e "$config_dir/$type_node" ]]; then
-      cp -r "$config_dir/$type_node" "$config_backup_dir/" 2> /dev/null
+      cp -r -- "$config_dir/$type_node" "$config_backup_dir/" 2> /dev/null
     fi
   done
 
@@ -761,9 +770,9 @@ uninstall() {
           log_info "找到專案：$(beautify_dir "$project_dir")"
           backup_to_agents_dir "$project_dir"
 
-          (cd "$project_dir" && unlink_all_tools "$project_dir" 2> /dev/null || true)
+          unlink_all_tools "$project_dir" 2> /dev/null || true
 
-          rm -rf "$project_dir/.ai-global"
+          rm -rf -- "$project_dir/.ai-global"
           log_ok "已移除專案設定：$(beautify_dir "$project_dir/.ai-global")"
           echo ""
 
@@ -778,10 +787,10 @@ uninstall() {
     fi
   fi
 
-  [[ -L /usr/local/bin/ai-global ]] && rm -f /usr/local/bin/ai-global
-  [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f "$HOME/.local/bin/ai-global"
+  [[ -L /usr/local/bin/ai-global ]] && rm -f -- /usr/local/bin/ai-global
+  [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f -- "$HOME/.local/bin/ai-global"
 
-  rm -rf "$HOME/.ai-global"
+  rm -rf -- "$HOME/.ai-global"
   log_ok "已移除系統設定：$(beautify_dir "$HOME/.ai-global")"
 
   log_ok "AI Global 已成功解除安裝"
