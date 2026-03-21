@@ -695,7 +695,7 @@ upgrade() {
   fi
 
   if [[ "$remote_version" == "$VERSION" ]]; then
-    log_ok "已是最新版本（$VERSION）"
+    log_ok "已是最新版本 (v$VERSION)"
     return 0
   fi
 
