@@ -68,10 +68,21 @@ beautify_dir() {
 log_context_info() {
   local base_dir="$1"
 
-  local mode="系統"
+  local mode="全域"
   [[ "$base_dir" != "$HOME" ]] && mode="專案"
 
   log_info "目錄：$(beautify_dir "$base_dir")（${mode}模式）"
+
+  # 專案模式下與使用者確認
+  if [[ "$base_dir" != "$HOME" ]]; then
+    local confirm
+    read -r -p "$(echo -e "${YELLOW}[WARN]${NC}") 目前路徑為專案模式，是否繼續動作？[y/N] " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+      log_info "已取消操作"
+      return 1
+    fi
+  fi
+
   echo ""
 }
 
@@ -84,7 +95,7 @@ parse_pattern() {
 # 更新：掃描、合併、更新 symlink
 update_links() {
   local base_dir=$(pwd)
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   log_info "正在掃描 AI 工具..."
 
@@ -241,7 +252,7 @@ EOF
 # 顯示 symlink 狀態
 show_status() {
   local base_dir=$(pwd)
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   local total_links=0
 
@@ -307,7 +318,7 @@ show_status() {
 # 列出支援的工具
 list_tools() {
   local base_dir=$(pwd)
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   echo -e "  ${BLUE}工具             Key          目錄                          AGENTS.md Rules Commands Skills Agents 狀態${NC}"
   echo -e "  ${BLUE}-----------------------------------------------------------------------------------------------------------${NC}"
@@ -336,7 +347,7 @@ list_tools() {
 # 列出可用備份
 list_backups() {
   local base_dir="$(pwd)"
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   local backups_dir="$base_dir/.ai-global/backups"
   local backups_list=$(find "$backups_dir" -maxdepth 1 -name "*.backup" 2> /dev/null | sort)
@@ -400,7 +411,7 @@ unlink_one_tool() {
 # 取消連結所有工具
 unlink_all_tools() {
   local base_dir="$1"
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   local total_unlinked=0
 
@@ -460,7 +471,7 @@ unlink_tool() {
     return 1
   fi
 
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   local has_found=false
 
@@ -663,7 +674,7 @@ add_skill() {
   fi
 
   local base_dir="$(pwd)"
-  log_context_info "$base_dir"
+  log_context_info "$base_dir" || return
 
   local skills_dir="$base_dir/.ai-global/skills"
   mkdir -p "$skills_dir"
