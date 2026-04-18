@@ -12,33 +12,16 @@ REPO_SLUG="lazyjerry/ai-global"
 # 已知的 AI 工具設定模式
 # 格式：nodes|key|name|agents_md|rules|commands|skills|subagents|color
 declare -a KNOWN_PATTERNS=(
-  ".amp|amp|Amp|AGENTS.md|rules|commands|skills|.|\\033[38;5;226m"
-  ".augment|augment|Augment|AGENTS.md|rules|commands|.|agents|\\033[38;5;46m"
-  ".blackbox|blackbox|Blackbox AI|.|.|.|skills|.|\\033[38;5;51m"
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
-  ".cline|cline|Cline|AGENTS.md|rules|.|skills|.|\\033[38;5;201m"
   ".clawdbot|clawdbot|Clawdbot Code|AGENTS.md|.|.|skills|subagents|\\033[38;5;208m"
   ".codex|codex|OpenAI Codex|AGENTS.md|rules|.|skills|agents|\\033[38;5;9m"
-  ".commandcode|commandcode|Command Code|AGENTS.md|.|.|skills|.|\\033[38;5;11m"
-  ".continue|continue|Continue|AGENTS.md|rules|.|.|.|\\033[38;5;10m"
-  ".copilot|copilot|GitHub Copilot|AGENTS.md|.|.|skills|agents|\\033[38;5;14m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
-  ".factory|droid|Factory Droid|AGENTS.md|rules|commands|skills|droids|\\033[38;5;13m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|.|skills|.|\\033[38;5;220m"
-  ".goose|goose|Goose AI|AGENTS.md|.|.|skills|.|\\033[38;5;82m"
   ".kiro|kiro|Kiro CLI|AGENTS.md|steering|.|skills|agents|\\033[38;5;117m"
   ".kilocode|kilocode|Kilo Code|AGENTS.md|rules|commands|skills|.|\\033[38;5;165m"
-  ".neovate|neovate|Neovate|AGENTS.md|.|commands|skills|agents|\\033[38;5;118m"
   ".opencode, .config/opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
-  ".openhands|openhands|OpenHands|AGENTS.md|.|.|skills|.|\\033[38;5;39m"
-  ".qodo|qodo|Qodo|AGENTS.md|.|.|.|agents|\\033[38;5;129m"
-  ".qoder|qoder|Qoder|AGENTS.md|rules|commands|skills|agents|\\033[38;5;203m"
-  ".roo|roo|Roo Code|AGENTS.md|rules|commands|skills|.|\\033[38;5;77m"
-  ".trae|trae|TRAE|AGENTS.md|rules|.|skills|.|\\033[38;5;215m"
   ".windsurf, .codeium/windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
-  ".zencoder|zencoder|Zencoder|AGENTS.md|rules|.|skills|.|\\033[38;5;147m"
-  ".github|github|GitHub|copilot-instructions.md|.|.|skills|agents|\\033[38;5;240m"
 )
 
 # 顏色
@@ -898,9 +881,9 @@ show_help() {
   echo ""
   echo -e "${BLUE}核心指令:${NC}"
   echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
-  echo -e "  ${GREEN}status${NC}              顯示 symlink 狀態"
-  echo -e "  ${GREEN}list${NC}                列出所有支援的 AI 工具"
-  echo -e "  ${GREEN}backups${NC}             列出可用備份"
+  echo -e "  ${GREEN}status, -s${NC}          顯示 symlink 狀態"
+  echo -e "  ${GREEN}list, -l${NC}            列出所有支援的 AI 工具"
+  echo -e "  ${GREEN}backups, -b${NC}         列出可用備份"
   echo -e "  ${GREEN}unlink <key>${NC}        還原工具的原始設定"
   echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
   echo ""
@@ -910,10 +893,10 @@ show_help() {
   echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
   echo ""
   echo -e "${BLUE}系統指令:${NC}"
-  echo -e "  ${GREEN}upgrade${NC}             升級至最新版本"
+  echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
   echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
-  echo -e "  ${GREEN}version${NC}             顯示版本"
-  echo -e "  ${GREEN}help${NC}                顯示此說明"
+  echo -e "  ${GREEN}version, -v${NC}         顯示版本"
+  echo -e "  ${GREEN}help, -h${NC}            顯示此說明"
   echo ""
 }
 
@@ -928,16 +911,16 @@ main() {
 
   case "$cmd" in
     update) update_links ;;
-    status) show_status ;;
-    list) list_tools ;;
-    backups) list_backups ;;
-    unlink) unlink_tool "$2" ;;
+    status | -s | --status) show_status ;;
+    list | -l | --list) list_tools ;;
+    backups | -b | --backups) list_backups ;;
+    unlink | --unlink) unlink_tool "$2" ;;
     add-skill) add_skill "$2" ;;
     add-rule) add_rule "$2" ;;
     add-command) add_command "$2" ;;
 
-    upgrade) upgrade ;;
-    uninstall) uninstall ;;
+    upgrade | -u | --upgrade) upgrade ;;
+    uninstall | --uninstall) uninstall ;;
     version | -v | --version) show_version ;;
     help | --help | -h) show_help ;;
     *)
