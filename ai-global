@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.1.0"
+VERSION="2.1.1"
 
 # 遠端腳本位址
 REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
@@ -636,6 +636,25 @@ download_from_github() {
             ;;
         esac
 
+        # === 紀錄安裝來源 ===
+        local source_file="$HOME/.ai-global/source.md"
+        local github_url="https://github.com/$owner/$repo"
+        case "$_install_mode" in
+          meta_root)
+            echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[0]}")" >> "$source_file"
+            ;;
+          meta_sub)
+            for _i in "${!_install_names[@]}"; do
+              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[$_i]}")" >> "$source_file"
+            done
+            ;;
+          files)
+            for _i in "${!_install_names[@]}"; do
+              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[$_i]}")" >> "$source_file"
+            done
+            ;;
+        esac
+
         echo ""
         log_ok "已從 $owner/$repo 新增 $resource_count 個 $resource_label 至 $(beautify_dir "$target_dir")"
       else
@@ -836,6 +855,15 @@ backup_to_agents_dir() {
 
 # 解除安裝
 uninstall() {
+  log_warn "此操作將完全移除 ai-global 及所有設定"
+  read -r -p "確定要解除安裝嗎? [y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy] ]]; then
+    log_info "已取消解除安裝"
+    return 0
+  fi
+
   # 將所有設定備份至 .agents 目錄
   echo ""
   backup_to_agents_dir "$HOME"
