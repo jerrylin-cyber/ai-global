@@ -886,7 +886,7 @@ uninstall() {
 
 # 顯示版本
 show_version() {
-  echo "ai-global 版本 $VERSION"
+  echo "歡迎使用 ai-global. LazyJerry 版本 $VERSION"
 }
 
 # 顯示說明
