@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.2.1"
+VERSION="2.2.2"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -688,6 +688,18 @@ download_from_github() {
             break
           fi
         done
+      fi
+
+      # 3. 遞迴搜尋整個倉庫中的中繼資料檔（fallback）
+      if [[ ${#_install_sources[@]} -eq 0 ]]; then
+        while IFS= read -r -d '' meta_path; do
+          local meta_parent
+          meta_parent=$(dirname "$meta_path")
+          _install_mode="meta_sub"
+          local name=$(extract_meta_name "$meta_path" "$(basename "$meta_parent")")
+          _install_sources+=("$meta_parent")
+          _install_names+=("$name")
+        done < <(find "$source_node" -name "$meta_file" -not -path '*/.git/*' -print0)
       fi
 
       # === 確認階段 ===
