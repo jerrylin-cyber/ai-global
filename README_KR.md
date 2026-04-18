@@ -8,14 +8,19 @@
 
 ### 원본과의 차이점
 
-이 포크는 프로젝트 모드를 제거하고 시스템 모드만 유지합니다.
+이 포크는 프로젝트 모드를 제거하고 시스템 모드만 유지하며, 여러 기능을 추가했습니다.
 
 원본은 실행 디렉토리에 따라 모드를 전환합니다. `~`에서는 시스템 모드, 그 외에는 프로젝트 모드로 동작하며, 프로젝트 디렉토리에 독립적인 `.ai-global/` 설정을 생성합니다. 이 버전은 다음과 같이 단순화했습니다:
 
-- 모드 구분 없이 모든 명령어가 현재 디렉토리에서 직접 실행됩니다
-- 프로젝트 경로를 `~/.ai-global/projects`에 기록하지 않습니다
-- 프로젝트 모드 확인 프롬프트를 제거했습니다
-- 제거 시 개별 프로젝트 설정을 정리하지 않습니다
+- 모드 구분 없이 모든 명령어가 글로벌 디렉토리 모드로 실행됩니다
+- 프로젝트 모드 제거
+- `relink` 명령어 추가: 모든 심볼릭 링크 재구성
+- `clean` 명령어 추가: 고아 백업 정리
+- `agents/` 하위 디렉토리 지원 추가
+- 제거 시 `~/.ai-global/` 디렉토리 보존 (원본은 삭제함)
+- 제거 전 확인(Y/N) 요청
+- 리소스 다운로드 시 확인 대화 및 소스 추적(`source.md`) 추가
+- UI 언어는 번체 중국어
 
 프로젝트별로 AI 설정을 분리해야 하는 경우 [원본](https://github.com/nanxiaobei/ai-global)을 사용하세요.
 
@@ -25,7 +30,7 @@
 
 ## 설치
 
-### curl
+### curl (추천)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lazyjerry/ai-global/main/install.sh | bash
@@ -68,8 +73,10 @@ ai-global
 | `ai-global status`                  | 심볼릭 링크 상태 표시                   |
 | `ai-global list`                    | 지원되는 도구 목록 표시                 |
 | `ai-global backups`                 | 사용 가능한 백업 목록 표시              |
+| `ai-global relink`                  | 모든 심볼릭 링크 재구성                 |
 | `ai-global unlink <key>`            | 특정 도구의 원본 설정 복원              |
 | `ai-global unlink all`              | 모든 도구 복원                          |
+| `ai-global clean`                   | 고아 백업 정리                          |
 | `ai-global add-skill <user/repo>`   | 스킬 추가                               |
 | `ai-global add-rule <user/repo>`    | 규칙 추가                               |
 | `ai-global add-command <user/repo>` | 명령어 추가                             |
@@ -128,32 +135,14 @@ ai-global add-command <user/repo>     # 명령어 추가
 | 도구           | Key           | AGENTS.md | Rules | Commands | Skills | Agents |
 | -------------- | ------------- | :-------: | :---: | :------: | :----: | :----: |
 | Claude Code    | `claude`      |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenAI Codex   | `codex`       |     ✓     |   ✓   |          |   ✓    |   ✓    |
+| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
+| Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
+| Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
 | Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Factory Droid  | `droid`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Amp            | `amp`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Antigravity    | `antigravity` |     ✓     |       |          |   ✓    |        |
 | Gemini CLI     | `gemini`      |     ✓     |       |          |   ✓    |        |
-| Kiro CLI       | `kiro`        |     ✓     |   ✓   |          |   ✓    |   ✓    |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Qoder          | `qoder`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Qodo           | `qodo`        |     ✓     |       |          |        |   ✓    |
-| GitHub Copilot | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Continue       | `continue`    |     ✓     |   ✓   |          |        |        |
 | Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
-| Roo Code       | `roo`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Cline          | `cline`       |     ✓     |   ✓   |          |   ✓    |        |
-| Blackbox AI    | `blackbox`    |           |       |          |   ✓    |        |
-| Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
-| Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
-| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
-| Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
-| TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
-| Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## 제거
 
@@ -164,8 +153,9 @@ ai-global uninstall
 실행 시:
 
 1. 모든 도구의 원본 설정을 복원합니다
-2. `~/.ai-global` 디렉토리를 삭제합니다
-3. `ai-global` 명령어를 제거합니다
+2. `ai-global` 명령어를 제거합니다
+
+참고: `~/.ai-global/` 디렉토리는 삭제되지 않으며, 설정 파일은 그대로 유지됩니다. 필요한 경우 수동으로 삭제하세요.
 
 npm으로 설치한 경우:
 

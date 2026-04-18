@@ -8,14 +8,19 @@
 
 ### 与原版的差异
 
-这个 Fork 去掉了项目模式，只保留系统模式。
+这个 Fork 去掉了项目模式，只保留系统模式，并新增多项功能。
 
 原版根据你在哪个目录执行来切换模式：在 `~` 就是系统模式，其他目录就是项目模式，会在项目目录下创建独立的 `.ai-global/` 配置。这个版本简化成：
 
-- 不再区分模式，所有命令直接在当前目录执行
-- 不再把项目路径写入 `~/.ai-global/projects`
-- 去掉项目模式的确认提示
-- 卸载时不会去清理各项目的配置
+- 不再区分模式，所有命令为全局目录模式
+- 去掉项目模式
+- 新增 `relink` 命令：重建所有软链
+- 新增 `clean` 命令：清理孤立备份
+- 新增 `agents/` 子目录支持
+- 卸载时保留 `~/.ai-global/` 目录（原版会删除）
+- 卸载前会先确认（Y/N）
+- 下载资源时加入确认对话与来源追踪（`source.md`）
+- 界面语言为繁体中文
 
 需要按项目分开管理 AI 配置的话，请用[原版](https://github.com/nanxiaobei/ai-global)。
 
@@ -25,7 +30,7 @@
 
 ## 安装
 
-### curl
+### curl（推荐）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lazyjerry/ai-global/main/install.sh | bash
@@ -68,8 +73,10 @@ ai-global
 | `ai-global status`                  | 显示软链状态                 |
 | `ai-global list`                    | 列出支持的工具               |
 | `ai-global backups`                 | 列出可用的备份               |
+| `ai-global relink`                  | 重建所有软链                 |
 | `ai-global unlink <key>`            | 恢复某个工具的原始配置       |
 | `ai-global unlink all`              | 恢复所有工具                 |
+| `ai-global clean`                   | 清理孤立备份                 |
 | `ai-global add-skill <user/repo>`   | 添加技能                     |
 | `ai-global add-rule <user/repo>`    | 添加规则                     |
 | `ai-global add-command <user/repo>` | 添加命令                     |
@@ -128,32 +135,14 @@ ai-global add-command <user/repo>     # 添加命令
 | 工具           | Key           | AGENTS.md | Rules | Commands | Skills | Agents |
 | -------------- | ------------- | :-------: | :---: | :------: | :----: | :----: |
 | Claude Code    | `claude`      |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenAI Codex   | `codex`       |     ✓     |   ✓   |          |   ✓    |   ✓    |
+| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
+| Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
+| Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
 | Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Factory Droid  | `droid`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Amp            | `amp`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Antigravity    | `antigravity` |     ✓     |       |          |   ✓    |        |
 | Gemini CLI     | `gemini`      |     ✓     |       |          |   ✓    |        |
-| Kiro CLI       | `kiro`        |     ✓     |   ✓   |          |   ✓    |   ✓    |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Qoder          | `qoder`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Qodo           | `qodo`        |     ✓     |       |          |        |   ✓    |
-| GitHub Copilot | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Continue       | `continue`    |     ✓     |   ✓   |          |        |        |
 | Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
-| Roo Code       | `roo`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Cline          | `cline`       |     ✓     |   ✓   |          |   ✓    |        |
-| Blackbox AI    | `blackbox`    |           |       |          |   ✓    |        |
-| Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
-| Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
-| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
-| Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
-| TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
-| Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## 卸载
 
@@ -164,8 +153,9 @@ ai-global uninstall
 这将会：
 
 1. 恢复所有工具的原始配置
-2. 删除 `~/.ai-global` 目录
-3. 移除 `ai-global` 命令
+2. 移除 `ai-global` 命令
+
+注意：`~/.ai-global/` 目录不会被删除，你的配置文件会保留。如需移除请手动删除。
 
 如果通过 npm 安装：
 

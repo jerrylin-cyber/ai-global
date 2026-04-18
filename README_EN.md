@@ -8,14 +8,19 @@
 
 ### Differences from upstream
 
-This fork removes project mode and keeps only system mode.
+This fork removes project mode, keeps only system mode, and adds several features.
 
 The original version switches between system/project mode based on which directory you run it from: `~` for system mode, anything else for project mode, creating an independent `.ai-global/` config under project directories. This version simplifies it to:
 
-- No more mode distinction — all commands run directly in the current directory
-- No longer writes project paths to `~/.ai-global/projects`
-- Removed the project mode confirmation prompt
-- Uninstall no longer cleans up individual project configs
+- No more mode distinction — all commands run in global directory mode
+- Removed project mode
+- Added `relink` command: rebuild all symlinks
+- Added `clean` command: clean up orphaned backups
+- Added `agents/` subdirectory support
+- Uninstall preserves `~/.ai-global/` directory (upstream deletes it)
+- Uninstall asks for confirmation (Y/N) before proceeding
+- Resource downloads include confirmation dialog and source tracking (`source.md`)
+- UI language is Traditional Chinese
 
 If you need per-project AI configs, use the [upstream version](https://github.com/nanxiaobei/ai-global).
 
@@ -25,7 +30,7 @@ Edit one file, sync to all your AI tools.
 
 ## Installation
 
-### curl
+### curl (Recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lazyjerry/ai-global/main/install.sh | bash
@@ -68,8 +73,10 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global status`                  | Show symlinks status                   |
 | `ai-global list`                    | List all supported AI tools            |
 | `ai-global backups`                 | List available backups                 |
+| `ai-global relink`                  | Rebuild all symlinks                   |
 | `ai-global unlink <key>`            | Restore a tool's original config       |
 | `ai-global unlink all`              | Restore all tools                      |
+| `ai-global clean`                   | Clean up orphaned backups              |
 | `ai-global add-skill <user/repo>`   | Add skills from GitHub repository      |
 | `ai-global add-rule <user/repo>`    | Add rules from GitHub repository       |
 | `ai-global add-command <user/repo>` | Add commands from GitHub repository    |
@@ -128,32 +135,14 @@ When you run `ai-global`, it merges items from all tools by filename:
 | Tool           | Key           | AGENTS.md | Rules | Commands | Skills | Agents |
 | -------------- | ------------- | :-------: | :---: | :------: | :----: | :----: |
 | Claude Code    | `claude`      |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenAI Codex   | `codex`       |     ✓     |   ✓   |          |   ✓    |   ✓    |
+| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
+| Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
+| Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
 | Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Factory Droid  | `droid`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Amp            | `amp`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Antigravity    | `antigravity` |     ✓     |       |          |   ✓    |        |
 | Gemini CLI     | `gemini`      |     ✓     |       |          |   ✓    |        |
-| Kiro CLI       | `kiro`        |     ✓     |   ✓   |          |   ✓    |   ✓    |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Qoder          | `qoder`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Qodo           | `qodo`        |     ✓     |       |          |        |   ✓    |
-| GitHub Copilot | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Continue       | `continue`    |     ✓     |   ✓   |          |        |        |
 | Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
-| Roo Code       | `roo`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Cline          | `cline`       |     ✓     |   ✓   |          |   ✓    |        |
-| Blackbox AI    | `blackbox`    |           |       |          |   ✓    |        |
-| Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
-| Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
-| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
-| Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
-| TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
-| Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## Uninstall
 
@@ -163,9 +152,10 @@ ai-global uninstall
 
 This will:
 
-1. Unlink all tools to original configuration
-2. Remove `~/.ai-global` directory
-3. Remove `ai-global` command
+1. Restore all tools to their original configuration
+2. Remove the `ai-global` command
+
+Note: The `~/.ai-global/` directory is preserved — your config files remain intact. Remove it manually if needed.
 
 If installed via npm:
 

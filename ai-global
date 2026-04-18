@@ -14,12 +14,11 @@ REPO_SLUG="lazyjerry/ai-global"
 declare -a KNOWN_PATTERNS=(
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
   ".clawdbot|clawdbot|Clawdbot Code|AGENTS.md|.|.|skills|subagents|\\033[38;5;208m"
-  ".codex|codex|OpenAI Codex|AGENTS.md|rules|.|skills|agents|\\033[38;5;9m"
+  ".codex|codex|Codex CLI|AGENTS.md|.|.|.|agents|\\033[38;5;9m"
+  ".copilot|copilot|Copilot CLI|copilot-instructions.md|.|.|skills|agents|\\033[38;5;45m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|.|skills|.|\\033[38;5;220m"
-  ".kiro|kiro|Kiro CLI|AGENTS.md|steering|.|skills|agents|\\033[38;5;117m"
-  ".kilocode|kilocode|Kilo Code|AGENTS.md|rules|commands|skills|.|\\033[38;5;165m"
   ".opencode, .config/opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
   ".windsurf, .codeium/windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
 )
@@ -51,6 +50,36 @@ beautify_dir() {
 log_context_info() {
   local base_dir="$1"
   log_info "目錄: $(beautify_dir "$base_dir")"
+  echo ""
+}
+
+# 顯示說明
+show_help() {
+  echo -e "${BLUE}AI Global: 統一 AI 工具設定管理器${NC} v$VERSION"
+  echo ""
+  echo -e "${BLUE}用法:${NC}"
+  echo -e "  ai-global [指令]"
+  echo ""
+  echo -e "${BLUE}核心指令:${NC}"
+  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
+  echo -e "  ${GREEN}status, -s${NC}          顯示 symlink 狀態"
+  echo -e "  ${GREEN}list, -l${NC}            列出所有支援的 AI 工具"
+  echo -e "  ${GREEN}backups, -b${NC}         列出可用備份"
+  echo -e "  ${GREEN}relink, -r${NC}          重建所有 symlink"
+  echo -e "  ${GREEN}unlink <key>${NC}        還原工具的原始設定"
+  echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
+  echo -e "  ${GREEN}clean, -c${NC}           清理孤立備份"
+  echo ""
+  echo -e "${BLUE}資源管理:${NC}"
+  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill (全域)"
+  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule (全域)"
+  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
+  echo ""
+  echo -e "${BLUE}系統指令:${NC}"
+  echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
+  echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
+  echo -e "  ${GREEN}version, -v${NC}         顯示版本"
+  echo -e "  ${GREEN}help, -h${NC}            顯示此說明"
   echo ""
 }
 
@@ -357,6 +386,93 @@ unlink_one_tool() {
   done
 
   _UNLINK_COUNT=$unlinked_count
+}
+
+# 清理孤立備份
+clean_backups() {
+  local base_dir="$HOME"
+  local backups_dir="$base_dir/.ai-global/backups"
+
+  if [[ ! -d "$backups_dir" ]]; then
+    log_info "備份目錄不存在"
+    echo ""
+    return
+  fi
+
+  local backups_list
+  backups_list=$(find "$backups_dir" -maxdepth 1 -name "*.backup" 2> /dev/null | sort)
+
+  if [[ -z "$backups_list" ]]; then
+    log_info "未找到任何備份"
+    echo ""
+    return
+  fi
+
+  local orphaned_count=0
+  local kept_count=0
+
+  while IFS= read -r backup_path; do
+    [[ -z "$backup_path" ]] && continue
+    local backup_name
+    backup_name=$(basename "$backup_path")
+
+    # 從備份檔名反推工具是否仍存在
+    local is_orphaned=true
+    for pattern in "${KNOWN_PATTERNS[@]}"; do
+      parse_pattern "$pattern"
+      for tool_node in "${node_array[@]}"; do
+        local prefix="${tool_node//\//_}"
+        if [[ "$backup_name" == "${prefix}."* ]]; then
+          if [[ -d "$base_dir/$tool_node" ]]; then
+            is_orphaned=false
+          fi
+        fi
+      done
+    done
+
+    if [[ "$is_orphaned" == true ]]; then
+      rm -rf -- "$backup_path"
+      log_ok "已清理孤立備份: $(beautify_dir "$backup_path")"
+      ((orphaned_count++))
+    else
+      ((kept_count++))
+    fi
+  done <<< "$backups_list"
+
+  if [[ $orphaned_count -eq 0 ]]; then
+    log_info "未找到孤立備份 ($kept_count 個備份仍有效)"
+  else
+    log_ok "已清理 $orphaned_count 個孤立備份"
+  fi
+  echo ""
+}
+
+# 重建所有 symlink
+relink_all() {
+  local base_dir="$HOME"
+  log_info "正在重建所有 symlink..."
+  echo ""
+
+  # 僅移除 symlink，不還原備份、不刪除備份
+  for pattern in "${KNOWN_PATTERNS[@]}"; do
+    parse_pattern "$pattern"
+    for tool_node in "${node_array[@]}"; do
+      local tool_dir="$base_dir/$tool_node"
+      if [[ -d "$tool_dir" ]]; then
+        local _type_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
+        for type_node in "${_type_nodes[@]}"; do
+          if [[ "$type_node" != "." ]]; then
+            local type_dir="$tool_dir/$type_node"
+            if [[ -L "$type_dir" ]]; then
+              rm -- "$type_dir"
+            fi
+          fi
+        done
+      fi
+    done
+  done
+
+  update_links
 }
 
 # 取消連結所有工具
@@ -860,8 +976,7 @@ uninstall() {
   [[ -L /usr/local/bin/ai-global ]] && rm -f -- /usr/local/bin/ai-global
   [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f -- "$HOME/.local/bin/ai-global"
 
-  rm -rf -- "$HOME/.ai-global"
-  log_ok "已移除系統設定: $(beautify_dir "$HOME/.ai-global")"
+  log_info "已保留設定目錄: $(beautify_dir "$HOME/.ai-global")（如需移除請手動刪除）"
 
   log_ok "AI Global 已成功解除安裝"
   echo ""
@@ -870,34 +985,6 @@ uninstall() {
 # 顯示版本
 show_version() {
   echo "歡迎使用 ai-global. LazyJerry 版本 $VERSION"
-}
-
-# 顯示說明
-show_help() {
-  echo -e "${BLUE}AI Global: 統一 AI 工具設定管理器${NC} v$VERSION"
-  echo ""
-  echo -e "${BLUE}用法:${NC}"
-  echo -e "  ai-global [指令]"
-  echo ""
-  echo -e "${BLUE}核心指令:${NC}"
-  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
-  echo -e "  ${GREEN}status, -s${NC}          顯示 symlink 狀態"
-  echo -e "  ${GREEN}list, -l${NC}            列出所有支援的 AI 工具"
-  echo -e "  ${GREEN}backups, -b${NC}         列出可用備份"
-  echo -e "  ${GREEN}unlink <key>${NC}        還原工具的原始設定"
-  echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
-  echo ""
-  echo -e "${BLUE}資源管理:${NC}"
-  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill (全域)"
-  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule (全域)"
-  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
-  echo ""
-  echo -e "${BLUE}系統指令:${NC}"
-  echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
-  echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
-  echo -e "  ${GREEN}version, -v${NC}         顯示版本"
-  echo -e "  ${GREEN}help, -h${NC}            顯示此說明"
-  echo ""
 }
 
 # 主程式
@@ -914,7 +1001,9 @@ main() {
     status | -s | --status) show_status ;;
     list | -l | --list) list_tools ;;
     backups | -b | --backups) list_backups ;;
+    relink | -r | --relink) relink_all ;;
     unlink | --unlink) unlink_tool "$2" ;;
+    clean | -c | --clean) clean_backups ;;
     add-skill) add_skill "$2" ;;
     add-rule) add_rule "$2" ;;
     add-command) add_command "$2" ;;

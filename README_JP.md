@@ -8,14 +8,19 @@
 
 ### オリジナル版との違い
 
-このフォークはプロジェクトモードを削除し、システムモードのみを残しています。
+このフォークはプロジェクトモードを削除し、システムモードのみを残し、複数の機能を追加しています。
 
 オリジナル版は実行ディレクトリに応じてモードを切り替えます。`~` ではシステムモード、それ以外ではプロジェクトモードとなり、プロジェクトディレクトリに独立した `.ai-global/` 設定を作成します。このバージョンでは以下のように簡素化しました：
 
-- モードの区別を廃止し、すべてのコマンドは現在のディレクトリで直接実行されます
-- プロジェクトパスを `~/.ai-global/projects` に書き込まなくなりました
-- プロジェクトモードの確認プロンプトを削除しました
-- アンインストール時に各プロジェクトの設定をクリーンアップしなくなりました
+- モードの区別を廃止し、すべてのコマンドはグローバルディレクトリモードで実行されます
+- プロジェクトモードを削除
+- `relink` コマンドを追加：すべてのシンボリックリンクを再構築
+- `clean` コマンドを追加：孤立したバックアップをクリーンアップ
+- `agents/` サブディレクトリのサポートを追加
+- アンインストール時に `~/.ai-global/` ディレクトリを保持（オリジナル版は削除します）
+- アンインストール前に確認（Y/N）を求めます
+- リソースダウンロード時に確認ダイアログとソース追跡（`source.md`）を追加
+- UI 言語は繁体字中国語
 
 プロジェクトごとに AI 設定を分けたい場合は、[オリジナル版](https://github.com/nanxiaobei/ai-global)をご利用ください。
 
@@ -25,7 +30,7 @@
 
 ## インストール
 
-### curl
+### curl（推奨）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lazyjerry/ai-global/main/install.sh | bash
@@ -68,8 +73,10 @@ ai-global
 | `ai-global status`                  | シンボリックリンクの状態を表示                       |
 | `ai-global list`                    | サポートされているツールを一覧表示                   |
 | `ai-global backups`                 | 利用可能なバックアップを一覧表示                     |
+| `ai-global relink`                  | すべてのシンボリックリンクを再構築                   |
 | `ai-global unlink <key>`            | 特定のツールの元の設定を復元                         |
 | `ai-global unlink all`              | すべてのツールを復元                                 |
+| `ai-global clean`                   | 孤立したバックアップをクリーンアップ                 |
 | `ai-global add-skill <user/repo>`   | スキルを追加                                         |
 | `ai-global add-rule <user/repo>`    | ルールを追加                                         |
 | `ai-global add-command <user/repo>` | コマンドを追加                                       |
@@ -128,32 +135,14 @@ ai-global add-command <user/repo>     # コマンドを追加
 | ツール         | Key           | AGENTS.md | Rules | Commands | Skills | Agents |
 | -------------- | ------------- | :-------: | :---: | :------: | :----: | :----: |
 | Claude Code    | `claude`      |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenAI Codex   | `codex`       |     ✓     |   ✓   |          |   ✓    |   ✓    |
+| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
+| Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
+| Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
 | Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Factory Droid  | `droid`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Amp            | `amp`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Antigravity    | `antigravity` |     ✓     |       |          |   ✓    |        |
 | Gemini CLI     | `gemini`      |     ✓     |       |          |   ✓    |        |
-| Kiro CLI       | `kiro`        |     ✓     |   ✓   |          |   ✓    |   ✓    |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Qoder          | `qoder`       |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Qodo           | `qodo`        |     ✓     |       |          |        |   ✓    |
-| GitHub Copilot | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Continue       | `continue`    |     ✓     |   ✓   |          |        |        |
 | Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
-| Roo Code       | `roo`         |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Cline          | `cline`       |     ✓     |   ✓   |          |   ✓    |        |
-| Blackbox AI    | `blackbox`    |           |       |          |   ✓    |        |
-| Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
-| Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
-| Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
-| Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
-| Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
-| TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
-| Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## アンインストール
 
@@ -164,8 +153,9 @@ ai-global uninstall
 これにより：
 
 1. すべてのツールの元の設定を復元
-2. `~/.ai-global` ディレクトリを削除
-3. `ai-global` コマンドを削除
+2. `ai-global` コマンドを削除
+
+注意：`~/.ai-global/` ディレクトリは削除されません。設定ファイルはそのまま残ります。必要に応じて手動で削除してください。
 
 npm でインストールした場合：
 
