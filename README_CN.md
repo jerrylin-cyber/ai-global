@@ -62,28 +62,31 @@ ai-global
 
 ### 命令列表
 
-| 命令                        | 说明                         |
-| --------------------------- | ---------------------------- |
-| `ai-global`                 | 扫描、合并、更新软链（默认） |
-| `ai-global status`          | 显示软链状态                 |
-| `ai-global list`            | 列出支持的工具               |
-| `ai-global backups`         | 列出可用的备份               |
-| `ai-global unlink <key>`    | 恢复某个工具的原始配置       |
-| `ai-global unlink all`      | 恢复所有工具                 |
-| `ai-global add <user/repo>` | 添加技能                     |
-| `ai-global upgrade`         | 升级到最新版本               |
-| `ai-global uninstall`       | 彻底卸载                     |
-| `ai-global version`         | 显示版本号                   |
-| `ai-global help`            | 显示帮助                     |
+| 命令                                | 说明                         |
+| ----------------------------------- | ---------------------------- |
+| `ai-global`                         | 扫描、合并、更新软链（默认） |
+| `ai-global status`                  | 显示软链状态                 |
+| `ai-global list`                    | 列出支持的工具               |
+| `ai-global backups`                 | 列出可用的备份               |
+| `ai-global unlink <key>`            | 恢复某个工具的原始配置       |
+| `ai-global unlink all`              | 恢复所有工具                 |
+| `ai-global add-skill <user/repo>`   | 添加技能                     |
+| `ai-global add-rule <user/repo>`    | 添加规则                     |
+| `ai-global add-command <user/repo>` | 添加命令                     |
+| `ai-global upgrade`                 | 升级到最新版本               |
+| `ai-global uninstall`               | 彻底卸载                     |
+| `ai-global version`                 | 显示版本号                   |
+| `ai-global help`                    | 显示帮助                     |
 
-### 添加技能
+### 添加资源
 
 ```bash
-ai-global add user/repo
-ai-global add https://github.com/user/repo
+ai-global add-skill <user/repo>       # 添加技能
+ai-global add-rule <user/repo>        # 添加规则
+ai-global add-command <user/repo>     # 添加命令
 ```
 
-技能将被下载并添加到你的 `.ai-global/skills/` 目录。
+支持 `user/repo` 或 `https://github.com/user/repo` 格式，资源将被下载至 `.ai-global/` 对应子目录。
 
 ## 工作原理
 
@@ -144,13 +147,13 @@ ai-global add https://github.com/user/repo
 | Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
 | Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |    ✓     |   ✓    |        |
+| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
 | Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
 | TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
 | Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |           |       |          |   ✓    |   ✓    |
+| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## 卸载
 

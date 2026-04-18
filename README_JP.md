@@ -62,28 +62,31 @@ ai-global
 
 ### コマンド一覧
 
-| コマンド                    | 説明                                                 |
-| --------------------------- | ---------------------------------------------------- |
-| `ai-global`                 | スキャン、マージ、シンボリックリンク更新（デフォルト） |
-| `ai-global status`          | シンボリックリンクの状態を表示                       |
-| `ai-global list`            | サポートされているツールを一覧表示                   |
-| `ai-global backups`         | 利用可能なバックアップを一覧表示                     |
-| `ai-global unlink <key>`    | 特定のツールの元の設定を復元                         |
-| `ai-global unlink all`      | すべてのツールを復元                                 |
-| `ai-global add <user/repo>` | スキルを追加                                         |
-| `ai-global upgrade`         | 最新バージョンにアップグレード                       |
-| `ai-global uninstall`       | 完全にアンインストール                               |
-| `ai-global version`         | バージョン番号を表示                                 |
-| `ai-global help`            | ヘルプを表示                                         |
+| コマンド                            | 説明                                                 |
+| ----------------------------------- | ---------------------------------------------------- |
+| `ai-global`                         | スキャン、マージ、シンボリックリンク更新（デフォルト） |
+| `ai-global status`                  | シンボリックリンクの状態を表示                       |
+| `ai-global list`                    | サポートされているツールを一覧表示                   |
+| `ai-global backups`                 | 利用可能なバックアップを一覧表示                     |
+| `ai-global unlink <key>`            | 特定のツールの元の設定を復元                         |
+| `ai-global unlink all`              | すべてのツールを復元                                 |
+| `ai-global add-skill <user/repo>`   | スキルを追加                                         |
+| `ai-global add-rule <user/repo>`    | ルールを追加                                         |
+| `ai-global add-command <user/repo>` | コマンドを追加                                       |
+| `ai-global upgrade`                 | 最新バージョンにアップグレード                       |
+| `ai-global uninstall`               | 完全にアンインストール                               |
+| `ai-global version`                 | バージョン番号を表示                                 |
+| `ai-global help`                    | ヘルプを表示                                         |
 
-### スキルを追加
+### リソースを追加
 
 ```bash
-ai-global add user/repo
-ai-global add https://github.com/user/repo
+ai-global add-skill <user/repo>       # スキルを追加
+ai-global add-rule <user/repo>        # ルールを追加
+ai-global add-command <user/repo>     # コマンドを追加
 ```
 
-スキルはダウンロードされ、`.ai-global/skills/` ディレクトリに追加されます。
+`user/repo` または `https://github.com/user/repo` 形式をサポートしています。リソースは `.ai-global/` の対応するサブディレクトリにダウンロードされます。
 
 ## 動作原理
 
@@ -144,13 +147,13 @@ ai-global add https://github.com/user/repo
 | Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
 | Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |    ✓     |   ✓    |        |
+| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
 | Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
 | TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
 | Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |           |       |          |   ✓    |   ✓    |
+| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## アンインストール
 

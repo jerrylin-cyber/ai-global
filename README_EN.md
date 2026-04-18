@@ -62,28 +62,31 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 
 ## Commands
 
-| Command                     | Description                            |
-| --------------------------- | -------------------------------------- |
-| `ai-global`                 | Scan, merge, update symlinks (default) |
-| `ai-global status`          | Show symlinks status                   |
-| `ai-global list`            | List all supported AI tools            |
-| `ai-global backups`         | List available backups                 |
-| `ai-global unlink <key>`    | Restore a tool's original config       |
-| `ai-global unlink all`      | Restore all tools                      |
-| `ai-global add <user/repo>` | Add skills from GitHub repository      |
-| `ai-global upgrade`         | Upgrade to latest version              |
-| `ai-global uninstall`       | Completely remove ai-global            |
-| `ai-global version`         | Show version                           |
-| `ai-global help`            | Show help                              |
+| Command                             | Description                            |
+| ----------------------------------- | -------------------------------------- |
+| `ai-global`                         | Scan, merge, update symlinks (default) |
+| `ai-global status`                  | Show symlinks status                   |
+| `ai-global list`                    | List all supported AI tools            |
+| `ai-global backups`                 | List available backups                 |
+| `ai-global unlink <key>`            | Restore a tool's original config       |
+| `ai-global unlink all`              | Restore all tools                      |
+| `ai-global add-skill <user/repo>`   | Add skills from GitHub repository      |
+| `ai-global add-rule <user/repo>`    | Add rules from GitHub repository       |
+| `ai-global add-command <user/repo>` | Add commands from GitHub repository    |
+| `ai-global upgrade`                 | Upgrade to latest version              |
+| `ai-global uninstall`               | Completely remove ai-global            |
+| `ai-global version`                 | Show version                           |
+| `ai-global help`                    | Show help                              |
 
-### Add skills
+### Add resources
 
 ```bash
-ai-global add user/repo
-ai-global add https://github.com/user/repo
+ai-global add-skill <user/repo>       # Add skills
+ai-global add-rule <user/repo>        # Add rules
+ai-global add-command <user/repo>     # Add commands
 ```
 
-Skills will be downloaded and added to your `.ai-global/skills/` directory.
+Supports `user/repo` or `https://github.com/user/repo` format. Resources will be downloaded to the corresponding subdirectory under `.ai-global/`.
 
 ## How it works
 
@@ -144,13 +147,13 @@ When you run `ai-global`, it merges items from all tools by filename:
 | Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
 | Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |    ✓     |   ✓    |        |
+| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
 | Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
 | TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
 | Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |           |       |          |   ✓    |   ✓    |
+| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## Uninstall
 

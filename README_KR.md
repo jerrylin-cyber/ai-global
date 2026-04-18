@@ -62,28 +62,31 @@ ai-global
 
 ### 명령어 목록
 
-| 명령어                      | 설명                                    |
-| --------------------------- | --------------------------------------- |
-| `ai-global`                 | 스캔, 병합, 심볼릭 링크 업데이트 (기본) |
-| `ai-global status`          | 심볼릭 링크 상태 표시                   |
-| `ai-global list`            | 지원되는 도구 목록 표시                 |
-| `ai-global backups`         | 사용 가능한 백업 목록 표시              |
-| `ai-global unlink <key>`    | 특정 도구의 원본 설정 복원              |
-| `ai-global unlink all`      | 모든 도구 복원                          |
-| `ai-global add <user/repo>` | 스킬 추가                               |
-| `ai-global upgrade`         | 최신 버전으로 업그레이드                |
-| `ai-global uninstall`       | 완전히 제거                             |
-| `ai-global version`         | 버전 번호 표시                          |
-| `ai-global help`            | 도움말 표시                             |
+| 명령어                                | 설명                                    |
+| ----------------------------------- | --------------------------------------- |
+| `ai-global`                         | 스캔, 병합, 심볼릭 링크 업데이트 (기본) |
+| `ai-global status`                  | 심볼릭 링크 상태 표시                   |
+| `ai-global list`                    | 지원되는 도구 목록 표시                 |
+| `ai-global backups`                 | 사용 가능한 백업 목록 표시              |
+| `ai-global unlink <key>`            | 특정 도구의 원본 설정 복원              |
+| `ai-global unlink all`              | 모든 도구 복원                          |
+| `ai-global add-skill <user/repo>`   | 스킬 추가                               |
+| `ai-global add-rule <user/repo>`    | 규칙 추가                               |
+| `ai-global add-command <user/repo>` | 명령어 추가                             |
+| `ai-global upgrade`                 | 최신 버전으로 업그레이드                |
+| `ai-global uninstall`               | 완전히 제거                             |
+| `ai-global version`                 | 버전 번호 표시                          |
+| `ai-global help`                    | 도움말 표시                             |
 
-### 스킬 추가
+### 리소스 추가
 
 ```bash
-ai-global add user/repo
-ai-global add https://github.com/user/repo
+ai-global add-skill <user/repo>       # 스킬 추가
+ai-global add-rule <user/repo>        # 규칙 추가
+ai-global add-command <user/repo>     # 명령어 추가
 ```
 
-스킬이 다운로드되어 `.ai-global/skills/` 디렉토리에 추가됩니다.
+`user/repo` 또는 `https://github.com/user/repo` 형식을 지원합니다. 리소스는 `.ai-global/` 하위의 해당 서브디렉토리에 다운로드됩니다.
 
 ## 작동 원리
 
@@ -144,13 +147,13 @@ ai-global add https://github.com/user/repo
 | Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
 | Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |    ✓     |   ✓    |        |
+| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
 | Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
 | TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
 | Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |           |       |          |   ✓    |   ✓    |
+| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## 제거
 

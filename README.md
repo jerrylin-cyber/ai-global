@@ -62,28 +62,31 @@ ai-global
 
 ### 指令列表
 
-| 指令                        | 說明                             |
-| --------------------------- | -------------------------------- |
-| `ai-global`                 | 掃描、合併、更新符號連結（預設） |
-| `ai-global status`          | 顯示符號連結狀態                 |
-| `ai-global list`            | 列出支援的工具                   |
-| `ai-global backups`         | 列出可用的備份                   |
-| `ai-global unlink <key>`    | 還原某個工具的原始設定           |
-| `ai-global unlink all`      | 還原所有工具                     |
-| `ai-global add <user/repo>` | 新增技能                         |
-| `ai-global upgrade`         | 升級到最新版本                   |
-| `ai-global uninstall`       | 完整解除安裝                     |
-| `ai-global version`         | 顯示版本號                       |
-| `ai-global help`            | 顯示說明                         |
+| 指令                                | 說明                             |
+| ----------------------------------- | -------------------------------- |
+| `ai-global`                         | 掃描、合併、更新符號連結（預設） |
+| `ai-global status`                  | 顯示符號連結狀態                 |
+| `ai-global list`                    | 列出支援的工具                   |
+| `ai-global backups`                 | 列出可用的備份                   |
+| `ai-global unlink <key>`            | 還原某個工具的原始設定           |
+| `ai-global unlink all`              | 還原所有工具                     |
+| `ai-global add-skill <user/repo>`   | 新增技能                         |
+| `ai-global add-rule <user/repo>`    | 新增規則                         |
+| `ai-global add-command <user/repo>` | 新增指令                         |
+| `ai-global upgrade`                 | 升級到最新版本                   |
+| `ai-global uninstall`               | 完整解除安裝                     |
+| `ai-global version`                 | 顯示版本號                       |
+| `ai-global help`                    | 顯示說明                         |
 
-### 新增技能
+### 新增資源
 
 ```bash
-ai-global add user/repo
-ai-global add https://github.com/user/repo
+ai-global add-skill <user/repo>       # 新增技能
+ai-global add-rule <user/repo>        # 新增規則
+ai-global add-command <user/repo>     # 新增指令
 ```
 
-技能將被下載並新增到你的 `.ai-global/skills/` 目錄。
+支援 `user/repo` 或 `https://github.com/user/repo` 格式，資源將被下載至 `.ai-global/` 對應子目錄。
 
 ## 運作原理
 
@@ -144,13 +147,13 @@ ai-global add https://github.com/user/repo
 | Goose AI       | `goose`       |     ✓     |       |          |   ✓    |        |
 | Augment        | `augment`     |     ✓     |   ✓   |    ✓     |        |   ✓    |
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
-| Command Code   | `commandcode` |     ✓     |       |    ✓     |   ✓    |        |
+| Command Code   | `commandcode` |     ✓     |       |          |   ✓    |        |
 | Kilo Code      | `kilocode`    |     ✓     |   ✓   |    ✓     |   ✓    |        |
 | Neovate        | `neovate`     |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | OpenHands      | `openhands`   |     ✓     |       |          |   ✓    |        |
 | TRAE           | `trae`        |     ✓     |   ✓   |          |   ✓    |        |
 | Zencoder       | `zencoder`    |     ✓     |   ✓   |          |   ✓    |        |
-| GitHub         | `github`      |           |       |          |   ✓    |   ✓    |
+| GitHub         | `github`      |     ✓     |       |          |   ✓    |   ✓    |
 
 ## 解除安裝
 
