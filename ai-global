@@ -79,7 +79,7 @@ parse_pattern() {
 
 # 更新：掃描、合併、更新 symlink
 update_links() {
-  local base_dir=$(pwd)
+  local base_dir="$HOME"
   log_context_info "$base_dir" || return
 
   log_info "正在掃描 AI 工具..."
@@ -193,7 +193,7 @@ update_links() {
   # 檢查是否找到任何工具
   if [[ $total_tools -eq 0 ]]; then
     log_info "未找到任何 AI 工具設定"
-    log_info "請在專案中建立 AI 工具設定目錄 (如 .cursor/ 或 .claude/)，然後重新執行"
+    log_info "未偵測到 AI 工具設定目錄 (如 ~/.cursor/ 或 ~/.claude/)"
     # 移除空的 .ai-global 目錄
     rm -rf -- "$base_dir/.ai-global" 2> /dev/null
     echo ""
@@ -219,7 +219,7 @@ EOF
 
 # 顯示 symlink 狀態
 show_status() {
-  local base_dir=$(pwd)
+  local base_dir="$HOME"
   log_context_info "$base_dir" || return
 
   local total_links=0
@@ -285,7 +285,7 @@ show_status() {
 
 # 列出支援的工具
 list_tools() {
-  local base_dir=$(pwd)
+  local base_dir="$HOME"
   log_context_info "$base_dir" || return
 
   echo -e "  ${BLUE}工具             Key          目錄                          AGENTS.md Rules Commands Skills Agents 狀態${NC}"
@@ -314,7 +314,7 @@ list_tools() {
 
 # 列出可用備份
 list_backups() {
-  local base_dir="$(pwd)"
+  local base_dir="$HOME"
   log_context_info "$base_dir" || return
 
   local backups_dir="$base_dir/.ai-global/backups"
@@ -413,7 +413,7 @@ unlink_tool() {
     return 1
   fi
 
-  local base_dir=$(pwd)
+  local base_dir="$HOME"
 
   if [[ "$query_key" == "all" ]]; then
     unlink_all_tools "$base_dir"
@@ -893,7 +893,7 @@ show_help() {
   echo -e "  ai-global [指令]"
   echo ""
   echo -e "${BLUE}核心指令:${NC}"
-  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink"
+  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
   echo -e "  ${GREEN}status${NC}              顯示 symlink 狀態"
   echo -e "  ${GREEN}list${NC}                列出所有支援的 AI 工具"
   echo -e "  ${GREEN}backups${NC}             列出可用備份"
