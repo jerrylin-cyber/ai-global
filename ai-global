@@ -67,7 +67,7 @@ beautify_dir() {
 # 顯示執行環境資訊
 log_context_info() {
   local base_dir="$1"
-  log_info "目錄：$(beautify_dir "$base_dir")"
+  log_info "目錄: $(beautify_dir "$base_dir")"
   echo ""
 }
 
@@ -118,7 +118,7 @@ update_links() {
         total_tools=$((total_tools + 1))
 
         echo ""
-        echo -e "${GREEN}[OK]${NC} ${color}找到：$name${NC}"
+        echo -e "${GREEN}[OK]${NC} ${color}找到: $name${NC}"
 
         local _type_keys=("file" "dir" "dir" "dir" "dir")
         local _type_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
@@ -193,7 +193,7 @@ update_links() {
   # 檢查是否找到任何工具
   if [[ $total_tools -eq 0 ]]; then
     log_info "未找到任何 AI 工具設定"
-    log_info "請在專案中建立 AI 工具設定目錄（如 .cursor/ 或 .claude/），然後重新執行"
+    log_info "請在專案中建立 AI 工具設定目錄 (如 .cursor/ 或 .claude/)，然後重新執行"
     # 移除空的 .ai-global 目錄
     rm -rf -- "$base_dir/.ai-global" 2> /dev/null
     echo ""
@@ -208,9 +208,9 @@ update_links() {
 <!-- 在此加入您的提示詞，將同步至所有 AI 工具。 -->
 EOF
     fi
-    log_info "已合併 AGENTS.md：$(beautify_dir "$agents_md_dir")"
+    log_info "已合併 AGENTS.md: $(beautify_dir "$agents_md_dir")"
   else
-    log_info "跳過合併：$(beautify_dir "$agents_md_dir")（已存在）"
+    log_info "跳過合併: $(beautify_dir "$agents_md_dir") (已存在)"
   fi
 
   log_ok "完成！"
@@ -355,7 +355,7 @@ unlink_one_tool() {
       local type_dir="$base_dir/$tool_node/$type_node"
       if [[ -L "$type_dir" ]]; then
         rm -- "$type_dir"
-        log_ok "已取消連結：${color}$(beautify_dir "$type_dir")${NC}"
+        log_ok "已取消連結: ${color}$(beautify_dir "$type_dir")${NC}"
         ((unlinked_count++))
 
         # 從備份還原
@@ -408,7 +408,7 @@ unlink_tool() {
   local query_key="$1"
 
   if [[ -z "$query_key" ]]; then
-    log_error "用法：ai-global unlink <key> 或 ai-global unlink all"
+    log_error "用法: ai-global unlink <key> 或 ai-global unlink all"
     echo ""
     return 1
   fi
@@ -432,7 +432,7 @@ unlink_tool() {
   done
 
   if [[ -z "$match" ]]; then
-    log_error "未知的工具：$query_key"
+    log_error "未知的工具: $query_key"
     echo "請使用正確的 <key>"
     echo ""
     list_tools
@@ -523,12 +523,12 @@ download_from_github() {
   path=$(echo "$parsed" | cut -d'/' -f3-)
 
   if [[ -z "$owner" ]] || [[ -z "$repo" ]]; then
-    log_error "無效的 GitHub 參照：$input"
+    log_error "無效的 GitHub 參照: $input"
     return 1
   fi
 
   if [[ -n "$path" ]]; then
-    log_error "不支援子路徑，僅接受 user/repo 格式：$input"
+    log_error "不支援子路徑，僅接受 user/repo 格式: $input"
     return 1
   fi
 
@@ -537,7 +537,7 @@ download_from_github() {
   tmp_dir=$(mktemp -d)
   local clone_url="https://github.com/$owner/$repo.git"
 
-  log_info "正在複製：$clone_url"
+  log_info "正在複製: $clone_url"
 
   if git clone --depth 1 --single-branch "$clone_url" "$tmp_dir/$repo"; then
     echo ""
@@ -593,11 +593,12 @@ download_from_github() {
 
       # === 確認階段 ===
       if [[ ${#_install_sources[@]} -gt 0 ]]; then
-        log_info "找到以下 $resource_label："
+        log_info "找到以下 $resource_label:"
         for _name in "${_install_names[@]}"; do
           echo "  - $_name"
         done
         echo ""
+        log_info "安裝目標: $(beautify_dir "$target_dir")"
         log_warn "請確認您已對此倉庫進行安全掃描"
         read -r -p "是否安裝？[Y/n] " _reply
         _reply="${_reply:-Y}"
@@ -643,14 +644,14 @@ download_from_github() {
         log_warn "在 $owner/$repo${searched_dir:+/$searched_dir} 中未找到 $resource_label"
       fi
     else
-      log_error "找不到路徑：$path"
+      log_error "找不到路徑: $path"
       rm -rf -- "$tmp_dir"
       return 1
     fi
     rm -rf -- "$tmp_dir"
   else
     rm -rf -- "$tmp_dir"
-    log_error "複製失敗：$clone_url"
+    log_error "複製失敗: $clone_url"
     return 1
   fi
 }
@@ -672,9 +673,9 @@ add_skill() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    log_error "用法：ai-global add-skill <user/repo>"
+    log_error "用法: ai-global add-skill <user/repo>"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-skill user/repo"
     echo "  ai-global add-skill https://github.com/user/repo"
     return 1
@@ -684,7 +685,7 @@ add_skill() {
   if not_github_ref "$input"; then
     log_error "輸入無效，請提供 GitHub 倉庫。"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-skill user/repo"
     echo "  ai-global add-skill https://github.com/user/repo"
     return 1
@@ -703,9 +704,9 @@ add_rule() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    log_error "用法：ai-global add-rule <user/repo>"
+    log_error "用法: ai-global add-rule <user/repo>"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-rule user/repo"
     echo "  ai-global add-rule https://github.com/user/repo"
     return 1
@@ -714,7 +715,7 @@ add_rule() {
   if not_github_ref "$input"; then
     log_error "輸入無效，請提供 GitHub 倉庫。"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-rule user/repo"
     echo "  ai-global add-rule https://github.com/user/repo"
     return 1
@@ -733,9 +734,9 @@ add_command() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    log_error "用法：ai-global add-command <user/repo>"
+    log_error "用法: ai-global add-command <user/repo>"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-command user/repo"
     echo "  ai-global add-command https://github.com/user/repo"
     return 1
@@ -744,7 +745,7 @@ add_command() {
   if not_github_ref "$input"; then
     log_error "輸入無效，請提供 GitHub 倉庫。"
     echo ""
-    echo "範例："
+    echo "範例:"
     echo "  ai-global add-command user/repo"
     echo "  ai-global add-command https://github.com/user/repo"
     return 1
@@ -775,7 +776,7 @@ upgrade() {
     return 0
   fi
 
-  log_info "正在升級：$VERSION -> $remote_version"
+  log_info "正在升級: $VERSION -> $remote_version"
 
   local current_script="$0"
   # 若透過 symlink 執行，更新目標檔案
@@ -845,7 +846,7 @@ uninstall() {
   [[ -L "$HOME/.local/bin/ai-global" ]] && rm -f -- "$HOME/.local/bin/ai-global"
 
   rm -rf -- "$HOME/.ai-global"
-  log_ok "已移除系統設定：$(beautify_dir "$HOME/.ai-global")"
+  log_ok "已移除系統設定: $(beautify_dir "$HOME/.ai-global")"
 
   log_ok "AI Global 已成功解除安裝"
   echo ""
@@ -858,25 +859,25 @@ show_version() {
 
 # 顯示說明
 show_help() {
-  echo -e "${BLUE}AI Global：統一 AI 工具設定管理器${NC} v$VERSION"
+  echo -e "${BLUE}AI Global: 統一 AI 工具設定管理器${NC} v$VERSION"
   echo ""
-  echo -e "${BLUE}用法：${NC}"
+  echo -e "${BLUE}用法:${NC}"
   echo -e "  ai-global [指令]"
   echo ""
-  echo -e "${BLUE}核心指令：${NC}"
-  echo -e "  ${GREEN}（預設）${NC}            掃描、合併、更新 symlink"
+  echo -e "${BLUE}核心指令:${NC}"
+  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink"
   echo -e "  ${GREEN}status${NC}              顯示 symlink 狀態"
   echo -e "  ${GREEN}list${NC}                列出所有支援的 AI 工具"
   echo -e "  ${GREEN}backups${NC}             列出可用備份"
   echo -e "  ${GREEN}unlink <key>${NC}        還原工具的原始設定"
   echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
   echo ""
-  echo -e "${BLUE}資源管理：${NC}"
-  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill（全域）"
-  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule（全域）"
-  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command（全域）"
+  echo -e "${BLUE}資源管理:${NC}"
+  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill (全域)"
+  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule (全域)"
+  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
   echo ""
-  echo -e "${BLUE}系統指令：${NC}"
+  echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade${NC}             升級至最新版本"
   echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
   echo -e "  ${GREEN}version${NC}             顯示版本"
@@ -908,7 +909,7 @@ main() {
     version | -v | --version) show_version ;;
     help | --help | -h) show_help ;;
     *)
-      log_error "未知的指令：$cmd"
+      log_error "未知的指令: $cmd"
       show_help
       exit 1
       ;;
