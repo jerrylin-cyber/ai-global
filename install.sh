@@ -26,8 +26,10 @@ main() {
   # 建立設定目錄
   mkdir -p "$CONFIG_DIR"
 
-  # 從 release tag 下載主程式
-  curl -fsSL "https://raw.githubusercontent.com/$REPO/$LATEST_TAG/ai-global" -o "$CONFIG_DIR/ai-global"
+  # 從 release tag 下載主程式（使用 API 避免 CDN 快取）
+  curl -fsSL -H "Accept: application/vnd.github.v3.raw" \
+    "https://api.github.com/repos/$REPO/contents/ai-global?ref=$LATEST_TAG" \
+    -o "$CONFIG_DIR/ai-global"
   chmod +x "$CONFIG_DIR/ai-global"
 
   # 從下載的腳本取得版本號
