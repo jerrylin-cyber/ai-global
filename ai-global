@@ -6,8 +6,8 @@
 # 版本號
 VERSION="2.1.1"
 
-# 遠端腳本位址
-REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
+# GitHub 倉庫路徑
+REPO_SLUG="lazyjerry/ai-global"
 
 # 已知的 AI 工具設定模式
 # 格式：nodes|key|name|agents_md|rules|commands|skills|subagents|color
@@ -782,20 +782,23 @@ add_command() {
 upgrade() {
   log_info "正在檢查更新..."
 
-  local remote_version
-  remote_version=$(curl -fsSL "$REMOTE_SCRIPT_URL" 2> /dev/null | grep '^VERSION=' | head -1 | sed 's/VERSION="\([^"]*\)"/\1/')
+  # 從 GitHub API 取得最新 release tag
+  local latest_tag
+  latest_tag=$(curl -fsSL "https://api.github.com/repos/$REPO_SLUG/releases/latest" 2> /dev/null | grep '"tag_name"' | sed 's/.*"tag_name": "\(.*\)".*/\1/')
 
-  if [[ -z "$remote_version" ]]; then
-    log_warn "無法檢查更新"
+  if [[ -z "$latest_tag" ]]; then
+    log_warn "無法取得最新版本"
     return 1
   fi
+
+  local remote_version="${latest_tag#v}"
 
   if [[ "$remote_version" == "$VERSION" ]]; then
     log_ok "已是最新版本 (v$VERSION)"
     return 0
   fi
 
-  log_info "正在升級: $VERSION -> $remote_version"
+  log_info "正在升級: v$VERSION -> v$remote_version"
 
   local current_script="$0"
   # 若透過 symlink 執行，更新目標檔案
@@ -803,9 +806,10 @@ upgrade() {
     current_script=$(readlink "$current_script")
   fi
 
+  local remote_url="https://raw.githubusercontent.com/$REPO_SLUG/$latest_tag/ai-global"
   local exec_temp
   exec_temp=$(mktemp)
-  if curl -fsSL "$REMOTE_SCRIPT_URL" -o "$exec_temp" 2> /dev/null; then
+  if curl -fsSL "$remote_url" -o "$exec_temp" 2> /dev/null; then
     chmod +x "$exec_temp"
 
     # 驗證下載的檔案是否為有效腳本
