@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.0.0"
+VERSION="2.1.0"
 
 # 遠端腳本位址
 REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/lazyjerry/ai-global/main/ai-global"
@@ -500,12 +500,18 @@ extract_meta_name() {
   fi
 }
 
-# 從 GitHub 下載
+# 從 GitHub 下載資源（泛用）
+# $1: GitHub 參照
+# $2: 目標目錄
+# $3: 中繼資料檔名（如 SKILL.md、RULE.md、COMMAND.md）
+# $4: 資源標籤（如 skill、rule、command）
+# $5: 搜尋子目錄（複數形 單數形，如 "skills skill"）
 download_from_github() {
   local input="$1"
-  local skills_dir="$2"
-
-  local skills_count=0
+  local target_dir="$2"
+  local meta_file="$3"
+  local resource_label="$4"
+  local search_dirs="$5"
 
   local parsed
   parsed=$(parse_github_ref "$input")
@@ -526,7 +532,7 @@ download_from_github() {
     return 1
   fi
 
-  # 複製整個倉庫或子目錄
+  # 複製整個倉庫
   local tmp_dir
   tmp_dir=$(mktemp -d)
   local clone_url="https://github.com/$owner/$repo.git"
@@ -536,62 +542,105 @@ download_from_github() {
   if git clone --depth 1 --single-branch "$clone_url" "$tmp_dir/$repo"; then
     echo ""
     local source_node="$tmp_dir/$repo"
-    [[ -n "$path" ]] && source_node="$tmp_dir/$repo/$path"
 
     if [[ -d "$source_node" ]]; then
-      local meta_file="SKILL.md"
+
+      # === 探索階段：找出可安裝的資源（不複製）===
+      local -a _install_sources=()
+      local -a _install_names=()
+      local _install_mode="" # meta_root | meta_sub | files
 
       # 1. 檢查根目錄是否包含中繼資料檔
       if [[ -f "$source_node/$meta_file" ]]; then
+        _install_mode="meta_root"
         local name=$(extract_meta_name "$source_node/$meta_file" "$(basename "$source_node")")
-        local file_dir="$skills_dir/$name"
-        mkdir -p -- "$file_dir"
-        cp -R -- "$source_node"/* "$file_dir/"
-        skills_count=1
+        _install_sources+=("$source_node")
+        _install_names+=("$name")
       fi
 
-      # 2. 檢查 skills/ 子目錄
-      if [[ $skills_count -eq 0 ]] && [[ -z "$path" ]]; then
-        for dir in skills skill; do
+      # 2. 檢查子目錄（含中繼資料的子目錄 → 直接檔案 fallback）
+      if [[ ${#_install_sources[@]} -eq 0 ]]; then
+        for dir in $search_dirs; do
           if [[ -d "$source_node/$dir" ]]; then
-            # 搜尋包含 SKILL.md 的子目錄
+            # 2a. 搜尋包含中繼資料檔的子目錄
             for d in "$source_node/$dir"/*; do
               [[ ! -d "$d" ]] && continue
               if [[ -f "$d/$meta_file" ]]; then
+                _install_mode="meta_sub"
                 local name=$(extract_meta_name "$d/$meta_file" "$(basename "$d")")
-                mkdir -p -- "$skills_dir/$name"
-                cp -R -- "$d"/* "$skills_dir/$name/"
-                echo "  - $name"
-                ((skills_count++))
+                _install_sources+=("$d")
+                _install_names+=("$name")
               fi
             done
+
+            # 2b. 若無中繼資料子目錄，直接複製目錄內的檔案
+            if [[ ${#_install_sources[@]} -eq 0 ]]; then
+              for f in "$source_node/$dir"/*; do
+                [[ ! -f "$f" ]] && continue
+                _install_mode="files"
+                _install_sources+=("$f")
+                _install_names+=("$(basename "$f")")
+              done
+            fi
           fi
 
-          # 若已找到項目，則結束此目錄的搜尋
-          if [[ $skills_count -gt 0 ]]; then
+          if [[ ${#_install_sources[@]} -gt 0 ]]; then
             source_node="$source_node/$dir"
             break
           fi
         done
       fi
 
-      # 3. 若仍未找到，檢查 src/ 目錄
-      if [[ $skills_count -eq 0 ]] && [[ -d "$source_node/src" ]]; then
-        if [[ -f "$source_node/src/$meta_file" ]]; then
-          local name=$(extract_meta_name "$source_node/src/$meta_file" "$(basename "$source_node")")
-          mkdir -p -- "$skills_dir/$name"
-          cp -R -- "$source_node/src"/* "$skills_dir/$name/"
-          skills_count=1
-        fi
-      fi
-
-      if [[ $skills_count -gt 0 ]]; then
+      # === 確認階段 ===
+      if [[ ${#_install_sources[@]} -gt 0 ]]; then
+        log_info "找到以下 $resource_label："
+        for _name in "${_install_names[@]}"; do
+          echo "  - $_name"
+        done
         echo ""
-        log_ok "已從 $owner/$repo 新增 $skills_count 個 skill 至 $(beautify_dir "$skills_dir")"
+        log_warn "請確認您已對此倉庫進行安全掃描"
+        read -r -p "是否安裝？[Y/n] " _reply
+        _reply="${_reply:-Y}"
+
+        if [[ ! "$_reply" =~ ^[Yy] ]]; then
+          log_info "已取消安裝"
+          rm -rf -- "$tmp_dir"
+          return 0
+        fi
+
+        # === 安裝階段 ===
+        local resource_count=0
+
+        case "$_install_mode" in
+          meta_root)
+            local file_dir="$target_dir/${_install_names[0]}"
+            mkdir -p -- "$file_dir"
+            cp -R -- "${_install_sources[0]}"/* "$file_dir/"
+            resource_count=1
+            ;;
+          meta_sub)
+            for _i in "${!_install_sources[@]}"; do
+              mkdir -p -- "$target_dir/${_install_names[$_i]}"
+              cp -R -- "${_install_sources[$_i]}"/* "$target_dir/${_install_names[$_i]}/"
+              echo "  - ${_install_names[$_i]}"
+              ((resource_count++))
+            done
+            ;;
+          files)
+            for _i in "${!_install_sources[@]}"; do
+              cp -- "${_install_sources[$_i]}" "$target_dir/" 2> /dev/null || true
+              echo "  - ${_install_names[$_i]}"
+              ((resource_count++))
+            done
+            ;;
+        esac
+
+        echo ""
+        log_ok "已從 $owner/$repo 新增 $resource_count 個 $resource_label 至 $(beautify_dir "$target_dir")"
       else
         local searched_dir="${source_node#$tmp_dir/$repo}"
         searched_dir="${searched_dir#/}"
-        log_warn "在 $owner/$repo${searched_dir:+/$searched_dir} 中未找到 skill"
+        log_warn "在 $owner/$repo${searched_dir:+/$searched_dir} 中未找到 $resource_label"
       fi
     else
       log_error "找不到路徑：$path"
@@ -618,16 +667,16 @@ not_github_ref() {
   return 0
 }
 
-# 新增 skill 至 skills 目錄
+# 新增 skill 至全域 skills 目錄
 add_skill() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    log_error "用法：ai-global add <user/repo>"
+    log_error "用法：ai-global add-skill <user/repo>"
     echo ""
     echo "範例："
-    echo "  ai-global add user/repo"
-    echo "  ai-global add https://github.com/user/repo"
+    echo "  ai-global add-skill user/repo"
+    echo "  ai-global add-skill https://github.com/user/repo"
     return 1
   fi
 
@@ -636,18 +685,77 @@ add_skill() {
     log_error "輸入無效，請提供 GitHub 倉庫。"
     echo ""
     echo "範例："
-    echo "  ai-global add user/repo"
-    echo "  ai-global add https://github.com/user/repo"
+    echo "  ai-global add-skill user/repo"
+    echo "  ai-global add-skill https://github.com/user/repo"
     return 1
   fi
 
-  local base_dir="$(pwd)"
-  log_context_info "$base_dir" || return
-
+  local base_dir="$HOME"
   local skills_dir="$base_dir/.ai-global/skills"
   mkdir -p "$skills_dir"
+  log_context_info "$skills_dir" || return
 
-  download_from_github "$input" "$skills_dir"
+  download_from_github "$input" "$skills_dir" "SKILL.md" "skill" "skills skill"
+}
+
+# 新增 rule 至全域 rules 目錄
+add_rule() {
+  local input="$1"
+
+  if [[ -z "$input" ]]; then
+    log_error "用法：ai-global add-rule <user/repo>"
+    echo ""
+    echo "範例："
+    echo "  ai-global add-rule user/repo"
+    echo "  ai-global add-rule https://github.com/user/repo"
+    return 1
+  fi
+
+  if not_github_ref "$input"; then
+    log_error "輸入無效，請提供 GitHub 倉庫。"
+    echo ""
+    echo "範例："
+    echo "  ai-global add-rule user/repo"
+    echo "  ai-global add-rule https://github.com/user/repo"
+    return 1
+  fi
+
+  local base_dir="$HOME"
+  local rules_dir="$base_dir/.ai-global/rules"
+  mkdir -p "$rules_dir"
+  log_context_info "$rules_dir" || return
+
+  download_from_github "$input" "$rules_dir" "RULE.md" "rule" "rules rule"
+}
+
+# 新增 command 至全域 commands 目錄
+add_command() {
+  local input="$1"
+
+  if [[ -z "$input" ]]; then
+    log_error "用法：ai-global add-command <user/repo>"
+    echo ""
+    echo "範例："
+    echo "  ai-global add-command user/repo"
+    echo "  ai-global add-command https://github.com/user/repo"
+    return 1
+  fi
+
+  if not_github_ref "$input"; then
+    log_error "輸入無效，請提供 GitHub 倉庫。"
+    echo ""
+    echo "範例："
+    echo "  ai-global add-command user/repo"
+    echo "  ai-global add-command https://github.com/user/repo"
+    return 1
+  fi
+
+  local base_dir="$HOME"
+  local commands_dir="$base_dir/.ai-global/commands"
+  mkdir -p "$commands_dir"
+  log_context_info "$commands_dir" || return
+
+  download_from_github "$input" "$commands_dir" "COMMAND.md" "command" "commands command"
 }
 
 # 升級
@@ -764,7 +872,9 @@ show_help() {
   echo -e "  ${GREEN}unlink all${NC}          還原所有工具"
   echo ""
   echo -e "${BLUE}資源管理：${NC}"
-  echo -e "  ${GREEN}add <user/repo>${NC}     新增 skill"
+  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill（全域）"
+  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule（全域）"
+  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command（全域）"
   echo ""
   echo -e "${BLUE}系統指令：${NC}"
   echo -e "  ${GREEN}upgrade${NC}             升級至最新版本"
@@ -789,7 +899,9 @@ main() {
     list) list_tools ;;
     backups) list_backups ;;
     unlink) unlink_tool "$2" ;;
-    add) add_skill "$2" ;;
+    add-skill) add_skill "$2" ;;
+    add-rule) add_rule "$2" ;;
+    add-command) add_command "$2" ;;
 
     upgrade) upgrade ;;
     uninstall) uninstall ;;
