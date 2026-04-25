@@ -2,7 +2,6 @@ node_modules
 .vscode
 .ai-global
 .DS_Store
-.github
 .claude
 .cursor
 docs/*

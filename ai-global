@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.2.2"
+VERSION="2.2.4"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -14,7 +14,7 @@ REPO_SLUG="lazyjerry/ai-global"
 declare -a KNOWN_PATTERNS=(
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
   ".clawdbot|clawdbot|Clawdbot Code|AGENTS.md|.|.|skills|subagents|\\033[38;5;208m"
-  ".codex|codex|Codex CLI|AGENTS.md|.|.|.|agents|\\033[38;5;9m"
+  ".codex|codex|Codex CLI|AGENTS.md|.|.|skills|agents|\\033[38;5;9m"
   ".copilot|copilot|Copilot CLI|copilot-instructions.md|.|.|skills|agents|\\033[38;5;45m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
