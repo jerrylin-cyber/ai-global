@@ -1,0 +1,10 @@
+# Rust 編譯產出
+src-tauri/target/
+
+# Node.js
+node_modules/
+dist/
+
+# 環境設定
+.env
+.env.local

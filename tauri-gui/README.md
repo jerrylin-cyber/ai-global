@@ -43,7 +43,7 @@ npm run dev
 # 等同於 tauri dev，會啟動 Vite dev server + Tauri 視窗
 ```
 
-> 預設 Vite 監聽 `http://localhost:5173`
+> 預設 Vite 監聽 `http://localhost:8001`
 
 ---
 

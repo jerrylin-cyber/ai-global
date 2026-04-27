@@ -3,7 +3,7 @@
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "npm run vite",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:8001",
     "frontendDist": "../dist"
   },
   "app": {

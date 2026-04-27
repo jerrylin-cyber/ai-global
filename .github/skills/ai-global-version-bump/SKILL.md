@@ -1,6 +1,6 @@
 ---
 name: ai-global-version-bump
-description: '僅針對 ai-global 專案同步更新版本號。用於調整 package.json 與 ai-global 腳本中的 VERSION，並檢查兩者一致。未指定格式時預設 SemVer，執行前先確認是否允許 rc/beta。觸發詞：版本更新、bump version、同步版本、release 版號。'
+description: '針對 ai-global 專案同步更新版本號。更新 package.json、ai-global 腳本的 VERSION，以及 tauri-gui 子專案（package.json 與 Cargo.toml）的版本號，並確認所有欄位一致。未指定格式時預設 SemVer，執行前先確認是否允許 rc/beta。觸發詞：版本更新、bump version、同步版本、release 版號。'
 argument-hint: '輸入目標版本號，例如 2.2.4'
 user-invocable: true
 ---
@@ -10,7 +10,9 @@ user-invocable: true
 ## 目標產出
 - 將 package.json 的 version 更新為目標版本
 - 將 ai-global 腳本的 VERSION 更新為相同版本
-- 確認兩個檔案的版本值完全一致
+- 將 tauri-gui/package.json 的 version 更新為相同版本
+- 將 tauri-gui/src-tauri/Cargo.toml 的 version 更新為相同版本
+- 確認四個檔案的版本值完全一致
 - 回報變更檔案與驗證結果
 
 ## 使用時機
@@ -20,17 +22,19 @@ user-invocable: true
 
 ## 範圍限制
 - 僅適用 ai-global 專案
-- 只修改下列兩個檔案的版本欄位：
+- 只修改下列四個檔案的版本欄位：
 	- ai-global/package.json
 	- ai-global/ai-global
+	- ai-global/tauri-gui/package.json
+	- ai-global/tauri-gui/src-tauri/Cargo.toml
 
 ## 主要流程
 1. 讀取參數並確認目標版本號
 2. 先確認版本格式策略：僅 SemVer，或允許 rc/beta
 3. 若使用者未指定格式，預設採用 SemVer
-4. 定位兩個檔案中的版本欄位
+4. 定位四個檔案中的版本欄位
 5. 僅更新必要行數，不修改其他內容
-6. 驗證兩處版本值相同
+6. 驗證四處版本值相同
 7. 回報完成狀態
 
 ## 決策點
@@ -41,13 +45,15 @@ user-invocable: true
 - 若檔案有其他不相關變更：保持不動，只改版本行
 
 ## 完成條件
-- package.json 的 version 等於目標版本
-- ai-global 的 VERSION 等於目標版本
-- 兩個檔案僅有版本行變更
+- ai-global/package.json 的 version 等於目標版本
+- ai-global/ai-global 的 VERSION 等於目標版本
+- tauri-gui/package.json 的 version 等於目標版本
+- tauri-gui/src-tauri/Cargo.toml 的 version 等於目標版本
+- 四個檔案僅有版本行變更
 
 ## 驗證建議
-- 搜尋 version 與 VERSION 並比對值
-- 檢查變更清單只包含目標檔案
+- 搜尋 version 與 VERSION 並比對值（注意 Cargo.toml 格式為 `version = "x.y.z"`）
+- 檢查變更清單只包含目標四個檔案
 
 ## 回覆格式建議
 - 列出已更新檔案

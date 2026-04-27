@@ -1,1 +1,0 @@
-{"default":{"identifier":"default","description":"Default capability for ai-global GUI","local":true,"windows":["main"],"permissions":["shell:allow-execute","shell:allow-spawn"]}}
