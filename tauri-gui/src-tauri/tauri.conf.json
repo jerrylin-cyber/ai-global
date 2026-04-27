@@ -1,0 +1,29 @@
+{
+  "identifier": "com.lazyjerry.tauri-gui",
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "npm run vite",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "minHeight": 750,
+        "minWidth": 750,
+        "resizable": true,
+        "title": "AI-GLOBAL",
+        "width": 750
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}

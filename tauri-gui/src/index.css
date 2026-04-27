@@ -1,0 +1,80 @@
+:root {
+  /* ── 色彩 Token ─────────────────────────── */
+  --bg-base:    #0d1117;
+  --bg-panel:   #161b22;
+  --bg-card:    #1c2333;
+  --bg-input:   #0d1117;
+  --bg-sidebar: #13181f;
+  --border:     rgba(139, 148, 158, 0.15);
+  --border-hover: rgba(139, 148, 158, 0.3);
+
+  --primary:    #58a6ff;
+  --primary-dim:#1f6feb;
+  --accent:     #79c0ff;
+  --success:    #3fb950;
+  --warning:    #d29922;
+  --danger:     #f85149;
+  --muted:      #8b949e;
+
+  --text:       #e6edf3;
+  --text-dim:   #8b949e;
+  --text-faint: #484f58;
+
+  /* ── 版型 Token ─────────────────────────── */
+  --titlebar-height: 40px;
+  --sidebar-width:   198px;
+  --statusbar-height: 26px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  color: var(--text);
+  background-color: var(--bg-base);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'PingFang TC', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-base);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+

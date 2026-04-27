@@ -6,3 +6,4 @@ node_modules
 .cursor
 docs/*
 tests/*
+dist/*
