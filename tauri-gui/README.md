@@ -4,6 +4,24 @@
 
 ---
 
+## macOS 安裝注意事項
+
+從 GitHub Releases 下載的 `.dmg` 尚未通過 Apple 公證（Notarization），macOS 可能顯示「已損毀，無法打開」。
+
+請在安裝後執行以下指令移除隔離屬性：
+
+```bash
+xattr -cr /Applications/ai-global.app
+```
+
+或在 dmg 掛載後、移入 Applications 前執行：
+
+```bash
+xattr -cr /Volumes/ai-global/ai-global.app
+```
+
+---
+
 ## 系統需求
 
 | 工具 | 版本 | 說明 |
