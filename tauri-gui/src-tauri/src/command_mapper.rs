@@ -1,7 +1,6 @@
 // Command mapping module - Maps AllowedAction to ai-global commands
 
 use crate::command_safety::{AllowedAction, CommandParams};
-use std::collections::HashMap;
 
 pub struct CommandMapper;
 

@@ -5,22 +5,16 @@
     windows_subsystem = "windows"
 )]
 
-mod command_safety;
-mod command_mapper;
-mod error_handling;
-mod process_runner;
-mod stream_handler;
-mod state_manager;
-mod tauri_commands;
-
+#[cfg(debug_assertions)]
 use tauri::Manager;
+use tauri_gui::tauri_commands;
 
 fn main() {
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(|_app| {
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").unwrap();
+                let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())
