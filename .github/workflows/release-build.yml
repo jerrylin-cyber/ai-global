@@ -55,9 +55,9 @@ jobs:
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: |
-            tauri-gui/src-tauri/target/release/bundle/macos/*.dmg
+            tauri-gui/src-tauri/target/release/bundle/dmg/*.dmg
             tauri-gui/src-tauri/target/release/bundle/macos/*.app.tar.gz
-            tauri-gui/src-tauri/target/release/bundle/windows/*.msi
-            tauri-gui/src-tauri/target/release/bundle/windows/*.exe
-            tauri-gui/src-tauri/target/release/bundle/linux/*.deb
-            tauri-gui/src-tauri/target/release/bundle/linux/*.AppImage
+            tauri-gui/src-tauri/target/release/bundle/msi/*.msi
+            tauri-gui/src-tauri/target/release/bundle/nsis/*.exe
+            tauri-gui/src-tauri/target/release/bundle/deb/*.deb
+            tauri-gui/src-tauri/target/release/bundle/appimage/*.AppImage
