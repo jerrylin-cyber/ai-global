@@ -1,5 +1,6 @@
 {
   "productName": "ai-global",
+  "version": "2.4.0",
   "identifier": "com.lazyjerry.tauri-gui",
   "build": {
     "beforeBuildCommand": "",
