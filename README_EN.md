@@ -91,23 +91,27 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 
 ## Commands
 
-| Command                             | Description                            |
-| ----------------------------------- | -------------------------------------- |
-| `ai-global`                         | Scan, merge, update symlinks (default) |
-| `ai-global status`                  | Show symlinks status                   |
-| `ai-global list`                    | List all supported AI tools            |
-| `ai-global backups`                 | List available backups                 |
-| `ai-global relink`                  | Rebuild all symlinks                   |
-| `ai-global unlink <key>`            | Restore a tool's original config       |
-| `ai-global unlink all`              | Restore all tools                      |
-| `ai-global clean`                   | Clean up orphaned backups              |
-| `ai-global add-skill <user/repo>`   | Add skills from GitHub repository      |
-| `ai-global add-rule <user/repo>`    | Add rules from GitHub repository       |
-| `ai-global add-command <user/repo>` | Add commands from GitHub repository    |
-| `ai-global upgrade`                 | Upgrade to latest version              |
-| `ai-global uninstall`               | Completely remove ai-global            |
-| `ai-global version`                 | Show version                           |
-| `ai-global help`                    | Show help                              |
+| Command                                  | Description                            |
+| ---------------------------------------- | -------------------------------------- |
+| `ai-global`                              | Scan, merge, update symlinks (default) |
+| `ai-global status`                       | Show symlinks status                   |
+| `ai-global list`                         | List all supported AI tools            |
+| `ai-global backups`                      | List available backups                 |
+| `ai-global relink`                       | Rebuild all symlinks                   |
+| `ai-global unlink <key>`                 | Restore a tool's original config       |
+| `ai-global unlink all`                   | Restore all tools                      |
+| `ai-global clean`                        | Clean up orphaned backups              |
+| `ai-global add-skill <user/repo>`        | Add skills from GitHub repository      |
+| `ai-global add-rule <user/repo>`         | Add rules from GitHub repository       |
+| `ai-global add-command <user/repo>`      | Add commands from GitHub repository    |
+| `ai-global list-skills` `ai-global -ls`  | List global skills                     |
+| `ai-global list-rules` `ai-global -lr`   | List global rules                      |
+| `ai-global list-commands` `ai-global -lc`| List global commands                   |
+| `ai-global list-agents` `ai-global -la`  | List global agents                     |
+| `ai-global upgrade`                      | Upgrade to latest version              |
+| `ai-global uninstall`                    | Completely remove ai-global            |
+| `ai-global version`                      | Show version                           |
+| `ai-global help`                         | Show help                              |
 
 ### Add resources
 
@@ -115,9 +119,15 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 ai-global add-skill <user/repo>       # Add skills
 ai-global add-rule <user/repo>        # Add rules
 ai-global add-command <user/repo>     # Add commands
+ai-global list-skills                 # List skills
+ai-global list-rules                  # List rules
+ai-global list-commands               # List commands
+ai-global list-agents                 # List agents
 ```
 
 Supports `user/repo` or `https://github.com/user/repo` format. Resources will be downloaded to the corresponding subdirectory under `.ai-global/`.
+
+Short aliases are also available: `-ls`, `-lr`, `-lc`, `-la`.
 
 ## How it works
 

@@ -91,23 +91,27 @@ ai-global
 
 ### コマンド一覧
 
-| コマンド                            | 説明                                                 |
-| ----------------------------------- | ---------------------------------------------------- |
-| `ai-global`                         | スキャン、マージ、シンボリックリンク更新（デフォルト） |
-| `ai-global status`                  | シンボリックリンクの状態を表示                       |
-| `ai-global list`                    | サポートされているツールを一覧表示                   |
-| `ai-global backups`                 | 利用可能なバックアップを一覧表示                     |
-| `ai-global relink`                  | すべてのシンボリックリンクを再構築                   |
-| `ai-global unlink <key>`            | 特定のツールの元の設定を復元                         |
-| `ai-global unlink all`              | すべてのツールを復元                                 |
-| `ai-global clean`                   | 孤立したバックアップをクリーンアップ                 |
-| `ai-global add-skill <user/repo>`   | スキルを追加                                         |
-| `ai-global add-rule <user/repo>`    | ルールを追加                                         |
-| `ai-global add-command <user/repo>` | コマンドを追加                                       |
-| `ai-global upgrade`                 | 最新バージョンにアップグレード                       |
-| `ai-global uninstall`               | 完全にアンインストール                               |
-| `ai-global version`                 | バージョン番号を表示                                 |
-| `ai-global help`                    | ヘルプを表示                                         |
+| コマンド                                 | 説明                                                 |
+| ---------------------------------------- | ---------------------------------------------------- |
+| `ai-global`                              | スキャン、マージ、シンボリックリンク更新（デフォルト） |
+| `ai-global status`                       | シンボリックリンクの状態を表示                       |
+| `ai-global list`                         | サポートされているツールを一覧表示                   |
+| `ai-global backups`                      | 利用可能なバックアップを一覧表示                     |
+| `ai-global relink`                       | すべてのシンボリックリンクを再構築                   |
+| `ai-global unlink <key>`                 | 特定のツールの元の設定を復元                         |
+| `ai-global unlink all`                   | すべてのツールを復元                                 |
+| `ai-global clean`                        | 孤立したバックアップをクリーンアップ                 |
+| `ai-global add-skill <user/repo>`        | スキルを追加                                         |
+| `ai-global add-rule <user/repo>`         | ルールを追加                                         |
+| `ai-global add-command <user/repo>`      | コマンドを追加                                       |
+| `ai-global list-skills` `ai-global -ls`  | グローバル skills を一覧表示                         |
+| `ai-global list-rules` `ai-global -lr`   | グローバル rules を一覧表示                          |
+| `ai-global list-commands` `ai-global -lc`| グローバル commands を一覧表示                       |
+| `ai-global list-agents` `ai-global -la`  | グローバル agents を一覧表示                         |
+| `ai-global upgrade`                      | 最新バージョンにアップグレード                       |
+| `ai-global uninstall`                    | 完全にアンインストール                               |
+| `ai-global version`                      | バージョン番号を表示                                 |
+| `ai-global help`                         | ヘルプを表示                                         |
 
 ### リソースを追加
 
@@ -115,9 +119,15 @@ ai-global
 ai-global add-skill <user/repo>       # スキルを追加
 ai-global add-rule <user/repo>        # ルールを追加
 ai-global add-command <user/repo>     # コマンドを追加
+ai-global list-skills                 # skills を一覧表示
+ai-global list-rules                  # rules を一覧表示
+ai-global list-commands               # commands を一覧表示
+ai-global list-agents                 # agents を一覧表示
 ```
 
 `user/repo` または `https://github.com/user/repo` 形式をサポートしています。リソースは `.ai-global/` の対応するサブディレクトリにダウンロードされます。
+
+短縮エイリアスも利用できます：`-ls`、`-lr`、`-lc`、`-la`。
 
 ## 動作原理
 

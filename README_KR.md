@@ -91,23 +91,27 @@ ai-global
 
 ### 명령어 목록
 
-| 명령어                                | 설명                                    |
-| ----------------------------------- | --------------------------------------- |
-| `ai-global`                         | 스캔, 병합, 심볼릭 링크 업데이트 (기본) |
-| `ai-global status`                  | 심볼릭 링크 상태 표시                   |
-| `ai-global list`                    | 지원되는 도구 목록 표시                 |
-| `ai-global backups`                 | 사용 가능한 백업 목록 표시              |
-| `ai-global relink`                  | 모든 심볼릭 링크 재구성                 |
-| `ai-global unlink <key>`            | 특정 도구의 원본 설정 복원              |
-| `ai-global unlink all`              | 모든 도구 복원                          |
-| `ai-global clean`                   | 고아 백업 정리                          |
-| `ai-global add-skill <user/repo>`   | 스킬 추가                               |
-| `ai-global add-rule <user/repo>`    | 규칙 추가                               |
-| `ai-global add-command <user/repo>` | 명령어 추가                             |
-| `ai-global upgrade`                 | 최신 버전으로 업그레이드                |
-| `ai-global uninstall`               | 완전히 제거                             |
-| `ai-global version`                 | 버전 번호 표시                          |
-| `ai-global help`                    | 도움말 표시                             |
+| 명령어                                   | 설명                                    |
+| ---------------------------------------- | --------------------------------------- |
+| `ai-global`                              | 스캔, 병합, 심볼릭 링크 업데이트 (기본) |
+| `ai-global status`                       | 심볼릭 링크 상태 표시                   |
+| `ai-global list`                         | 지원되는 도구 목록 표시                 |
+| `ai-global backups`                      | 사용 가능한 백업 목록 표시              |
+| `ai-global relink`                       | 모든 심볼릭 링크 재구성                 |
+| `ai-global unlink <key>`                 | 특정 도구의 원본 설정 복원              |
+| `ai-global unlink all`                   | 모든 도구 복원                          |
+| `ai-global clean`                        | 고아 백업 정리                          |
+| `ai-global add-skill <user/repo>`        | 스킬 추가                               |
+| `ai-global add-rule <user/repo>`         | 규칙 추가                               |
+| `ai-global add-command <user/repo>`      | 명령어 추가                             |
+| `ai-global list-skills` `ai-global -ls`  | 전역 skills 목록 표시                   |
+| `ai-global list-rules` `ai-global -lr`   | 전역 rules 목록 표시                    |
+| `ai-global list-commands` `ai-global -lc`| 전역 commands 목록 표시                 |
+| `ai-global list-agents` `ai-global -la`  | 전역 agents 목록 표시                   |
+| `ai-global upgrade`                      | 최신 버전으로 업그레이드                |
+| `ai-global uninstall`                    | 완전히 제거                             |
+| `ai-global version`                      | 버전 번호 표시                          |
+| `ai-global help`                         | 도움말 표시                             |
 
 ### 리소스 추가
 
@@ -115,9 +119,15 @@ ai-global
 ai-global add-skill <user/repo>       # 스킬 추가
 ai-global add-rule <user/repo>        # 규칙 추가
 ai-global add-command <user/repo>     # 명령어 추가
+ai-global list-skills                 # skills 목록 표시
+ai-global list-rules                  # rules 목록 표시
+ai-global list-commands               # commands 목록 표시
+ai-global list-agents                 # agents 목록 표시
 ```
 
 `user/repo` 또는 `https://github.com/user/repo` 형식을 지원합니다. 리소스는 `.ai-global/` 하위의 해당 서브디렉토리에 다운로드됩니다.
+
+짧은 별칭도 사용할 수 있습니다: `-ls`, `-lr`, `-lc`, `-la`.
 
 ## 작동 원리
 

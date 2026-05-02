@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.4.0"
+VERSION="2.5.0"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -74,6 +74,10 @@ show_help() {
   echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill (全域)"
   echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule (全域)"
   echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
+  echo -e "  ${GREEN}list-skills, -ls${NC}         列出全域 skills"
+  echo -e "  ${GREEN}list-rules, -lr${NC}          列出全域 rules"
+  echo -e "  ${GREEN}list-commands, -lc${NC}       列出全域 commands"
+  echo -e "  ${GREEN}list-agents, -la${NC}         列出全域 agents"
   echo ""
   echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
@@ -347,6 +351,63 @@ list_backups() {
     echo -e "  ${display_dir}"
   done <<< "$backups_list"
   echo ""
+}
+
+# 列出全域資源目錄中的項目
+list_global_resources() {
+  local dir_name="$1"
+  local label="$2"
+  local base_dir="$HOME"
+  local target_dir="$base_dir/.ai-global/$dir_name"
+
+  log_context_info "$target_dir" || return
+
+  if [[ ! -d "$target_dir" ]]; then
+    log_info "目錄不存在: $(beautify_dir "$target_dir")"
+    echo ""
+    return 0
+  fi
+
+  local entries
+  entries=$(find "$target_dir" -mindepth 1 -maxdepth 1 ! -name '.*' | sort)
+
+  if [[ -z "$entries" ]]; then
+    log_info "未找到任何 $label"
+    echo ""
+    return 0
+  fi
+
+  echo -e "  ${BLUE}${label} 列表${NC}"
+  echo "  ----------------------------------------------------------------------"
+
+  while IFS= read -r entry; do
+    [[ -z "$entry" ]] && continue
+    local name
+    name=$(basename "$entry")
+    if [[ -d "$entry" ]]; then
+      echo "  $name/"
+    else
+      echo "  $name"
+    fi
+  done <<< "$entries"
+
+  echo ""
+}
+
+list_skills() {
+  list_global_resources "skills" "skills"
+}
+
+list_rules() {
+  list_global_resources "rules" "rules"
+}
+
+list_commands() {
+  list_global_resources "commands" "commands"
+}
+
+list_agents() {
+  list_global_resources "agents" "agents"
 }
 
 # 取消連結單一工具
@@ -1013,6 +1074,10 @@ main() {
     status | -s | --status) show_status ;;
     list | -l | --list) list_tools ;;
     backups | -b | --backups) list_backups ;;
+    list-skills | -ls | --list-skills) list_skills ;;
+    list-rules | -lr | --list-rules) list_rules ;;
+    list-commands | -lc | --list-commands) list_commands ;;
+    list-agents | -la | --list-agents) list_agents ;;
     relink | -r | --relink) relink_all ;;
     unlink | --unlink) unlink_tool "$2" ;;
     clean | -c | --clean) clean_backups ;;

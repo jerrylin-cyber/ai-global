@@ -91,23 +91,27 @@ ai-global
 
 ### 命令列表
 
-| 命令                                | 说明                         |
-| ----------------------------------- | ---------------------------- |
-| `ai-global`                         | 扫描、合并、更新软链（默认） |
-| `ai-global status`                  | 显示软链状态                 |
-| `ai-global list`                    | 列出支持的工具               |
-| `ai-global backups`                 | 列出可用的备份               |
-| `ai-global relink`                  | 重建所有软链                 |
-| `ai-global unlink <key>`            | 恢复某个工具的原始配置       |
-| `ai-global unlink all`              | 恢复所有工具                 |
-| `ai-global clean`                   | 清理孤立备份                 |
-| `ai-global add-skill <user/repo>`   | 添加技能                     |
-| `ai-global add-rule <user/repo>`    | 添加规则                     |
-| `ai-global add-command <user/repo>` | 添加命令                     |
-| `ai-global upgrade`                 | 升级到最新版本               |
-| `ai-global uninstall`               | 彻底卸载                     |
-| `ai-global version`                 | 显示版本号                   |
-| `ai-global help`                    | 显示帮助                     |
+| 命令                                     | 说明                         |
+| ---------------------------------------- | ---------------------------- |
+| `ai-global`                              | 扫描、合并、更新软链（默认） |
+| `ai-global status`                       | 显示软链状态                 |
+| `ai-global list`                         | 列出支持的工具               |
+| `ai-global backups`                      | 列出可用的备份               |
+| `ai-global relink`                       | 重建所有软链                 |
+| `ai-global unlink <key>`                 | 恢复某个工具的原始配置       |
+| `ai-global unlink all`                   | 恢复所有工具                 |
+| `ai-global clean`                        | 清理孤立备份                 |
+| `ai-global add-skill <user/repo>`        | 添加技能                     |
+| `ai-global add-rule <user/repo>`         | 添加规则                     |
+| `ai-global add-command <user/repo>`      | 添加命令                     |
+| `ai-global list-skills` `ai-global -ls`  | 列出全局 skills              |
+| `ai-global list-rules` `ai-global -lr`   | 列出全局 rules               |
+| `ai-global list-commands` `ai-global -lc`| 列出全局 commands            |
+| `ai-global list-agents` `ai-global -la`  | 列出全局 agents              |
+| `ai-global upgrade`                      | 升级到最新版本               |
+| `ai-global uninstall`                    | 彻底卸载                     |
+| `ai-global version`                      | 显示版本号                   |
+| `ai-global help`                         | 显示帮助                     |
 
 ### 添加资源
 
@@ -115,9 +119,15 @@ ai-global
 ai-global add-skill <user/repo>       # 添加技能
 ai-global add-rule <user/repo>        # 添加规则
 ai-global add-command <user/repo>     # 添加命令
+ai-global list-skills                 # 列出 skills
+ai-global list-rules                  # 列出 rules
+ai-global list-commands               # 列出 commands
+ai-global list-agents                 # 列出 agents
 ```
 
 支持 `user/repo` 或 `https://github.com/user/repo` 格式，资源将被下载至 `.ai-global/` 对应子目录。
+
+也可使用短命令：`-ls`、`-lr`、`-lc`、`-la`。
 
 ## 工作原理
 
