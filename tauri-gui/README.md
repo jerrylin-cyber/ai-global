@@ -1,6 +1,13 @@
 # ai-global GUI
 
-以 [Tauri v2](https://tauri.app) + React 18 打包的桌面 GUI，為 [ai-global](https://github.com/lazyjerry/ai-global) CLI 提供圖形操作介面，支援 5 個核心命令：`status`、`list`、`relink`、`clean`、`upgrade`。
+以 [Tauri v2](https://tauri.app) + React 18 打包的桌面 GUI，為 [ai-global](https://github.com/lazyjerry/ai-global) CLI 提供圖形操作介面，涵蓋狀態檢查、全域資源檢視、備份還原與維護操作。
+
+目前介面分成 4 個主要區塊：
+
+- Insights：顯示 `status` 狀態摘要與 `backups` 備份清單
+- Resources：顯示 `list-skills`、`list-rules`、`list-commands`、`list-agents`，並支援 `add-skill`、`add-rule`、`add-command`
+- Maintenance：提供 `relink`、`clean`、`upgrade`、`unlink`
+- Tools：顯示 `list` 工具安裝狀態與版本資訊
 
 ---
 
@@ -75,15 +82,21 @@ npm run build
 # 產出在 src-tauri/target/release/bundle/
 ```
 
-macOS 產出位置範例：`src-tauri/target/release/bundle/macos/ai-global GUI.app`
+macOS 產出位置範例：`src-tauri/target/release/bundle/macos/ai-global.app`
 
 ---
 
 ## 執行測試
 
 ```bash
+# 前端型別檢查
+npx tsc --noEmit
+
 # 前端單元測試（Vitest）
 npm run test:unit
+
+# 前端 E2E 測試（需先安裝 Playwright 瀏覽器）
+npm run test:e2e
 
 # Rust 後端單元測試
 cd src-tauri
@@ -97,14 +110,16 @@ cargo test
 
 ```
 tauri-gui/
-├── src/                    # React 前端
-│   ├── App.tsx             # 主應用、狀態管理
-│   ├── tauri_client.ts     # invoke 封裝（前後端橋接）
-│   ├── tooling.ts          # 輸出解析工具函式
-│   └── *.test.ts           # Vitest 單元測試
-├── src-tauri/              # Rust 後端
+├── src/                        # React 前端
+│   ├── App.tsx                 # 主應用、分頁與狀態管理
+│   ├── components/             # Dashboard、Tools、OutputConsole、ConfirmDialog
+│   ├── tauri_client.ts         # invoke 封裝（前後端橋接）
+│   ├── tooling.ts              # CLI 輸出解析工具函式
+│   ├── types.ts                # 前後端共用 action 型別
+│   └── *.test.ts               # Vitest 單元測試
+├── src-tauri/                  # Rust 後端
 │   ├── src/
-│   │   ├── main.rs         # 入口，註冊 Tauri commands
+│   │   ├── main.rs             # 入口，註冊 Tauri commands
 │   │   ├── tauri_commands.rs   # IPC 橋接層
 │   │   ├── command_safety.rs   # 輸入驗證、白名單
 │   │   ├── command_mapper.rs   # action → CLI 命令映射
@@ -113,8 +128,8 @@ tauri-gui/
 │   │   ├── state_manager.rs    # 執行狀態管理
 │   │   └── error_handling.rs   # 錯誤型別
 │   ├── capabilities/
-│   │   └── default.json    # Tauri 權限設定
-│   └── tauri.conf.json     # Tauri 建置設定
+│   │   └── default.json        # Tauri 權限設定
+│   └── tauri.conf.json         # Tauri 視窗與建置設定
 └── package.json
 ```
 
@@ -126,8 +141,19 @@ tauri-gui/
 |------|------|----------|
 | `status` | 顯示目前安裝狀態 | 同步（完整輸出） |
 | `list` | 列出所有已安裝工具 | 同步（完整輸出） |
+| `backups` | 列出可用備份 | 同步（完整輸出） |
+| `list-skills` | 列出全域 skills | 同步（完整輸出） |
+| `list-rules` | 列出全域 rules | 同步（完整輸出） |
+| `list-commands` | 列出全域 commands | 同步（完整輸出） |
+| `list-agents` | 列出全域 agents | 同步（完整輸出） |
 | `relink` | 重建所有 symlink | 同步（完整輸出） |
+| `unlink <key\|all>` | 還原指定工具或全部工具 | 同步（完整輸出） |
+| `add-skill <user/repo>` | 安裝全域 skill | 同步（完整輸出） |
+| `add-rule <user/repo>` | 安裝全域 rule | 同步（完整輸出） |
+| `add-command <user/repo>` | 安裝全域 command | 同步（完整輸出） |
 | `clean` | 清除快取與暫存檔 | 串流（即時輸出） |
 | `upgrade` | 升級所有工具 | 串流（即時輸出） |
 
 `clean` / `upgrade` 採串流模式，輸出透過 Tauri 事件 `stream-event` 即時推送至前端。
+
+`relink`、`clean`、`upgrade`、`unlink` 會在前端先顯示確認對話框，再送出命令。

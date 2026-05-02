@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { Dashboard, Tools, OutputConsole, ConfirmDialog } from './components'
 import { tauriClient } from './tauri_client'
-import { extractVersionFromPath, parseToolsFromListOutput, stripAnsi } from './tooling'
-import type { AllowedAction, CommandRequest } from './types'
+import { extractVersionFromPath, parseGlobalResourceListOutput, parseToolsFromListOutput, stripAnsi } from './tooling'
+import type { AllowedAction, CommandRequest, ResourceListAction } from './types'
 import { MAINTENANCE_ACTIONS, RISKY_ACTIONS } from './types'
 
 interface LogEntry {
@@ -22,6 +22,24 @@ interface ToolItem {
 interface StatusSection {
   title: string
   items: string[]
+}
+
+type ResourceSummaryMap = Record<ResourceListAction, string[]>
+
+type ResourceQueryMap = Record<ResourceListAction, boolean>
+
+const EMPTY_RESOURCE_SUMMARY: ResourceSummaryMap = {
+  'list-skills': [],
+  'list-rules': [],
+  'list-commands': [],
+  'list-agents': [],
+}
+
+const EMPTY_RESOURCE_QUERIES: ResourceQueryMap = {
+  'list-skills': false,
+  'list-rules': false,
+  'list-commands': false,
+  'list-agents': false,
 }
 
 const cleanOutputLine = (line: string) =>
@@ -42,6 +60,38 @@ const restoreBackupHelpLines = [
   'unlink <key>        還原工具的原始設定',
   'unlink all          還原所有工具',
 ]
+
+const globalResourceHelpLines = [
+  'list-skills, -ls         列出全域 skills',
+  'list-rules, -lr          列出全域 rules',
+  'list-commands, -lc       列出全域 commands',
+  'list-agents, -la         列出全域 agents',
+]
+
+const RESOURCE_LIST_ORDER: ResourceListAction[] = ['list-skills', 'list-rules', 'list-commands', 'list-agents']
+
+const RESOURCE_LIST_META: Record<ResourceListAction, { title: string; empty: string; button: string }> = {
+  'list-skills': {
+    title: 'Skills',
+    empty: '尚未查詢 skills，或目前沒有可顯示的全域 skill。',
+    button: '查看 Skills',
+  },
+  'list-rules': {
+    title: 'Rules',
+    empty: '尚未查詢 rules，或目前沒有可顯示的全域 rule。',
+    button: '查看 Rules',
+  },
+  'list-commands': {
+    title: 'Commands',
+    empty: '尚未查詢 commands，或目前沒有可顯示的全域 command。',
+    button: '查看 Commands',
+  },
+  'list-agents': {
+    title: 'Agents',
+    empty: '尚未查詢 agents，或目前沒有可顯示的全域 agent。',
+    button: '查看 Agents',
+  },
+}
 
 const parseStatusOutput = (output: string): { meta: string[]; sections: StatusSection[] } => {
   const lines = output
@@ -136,6 +186,8 @@ function App() {
   const [hasStatusQueried, setHasStatusQueried] = useState(false)
   const [backupSummary, setBackupSummary] = useState<string[]>([])
   const [hasBackupsQueried, setHasBackupsQueried] = useState(false)
+  const [resourceSummary, setResourceSummary] = useState<ResourceSummaryMap>(EMPTY_RESOURCE_SUMMARY)
+  const [hasResourceQueried, setHasResourceQueried] = useState<ResourceQueryMap>(EMPTY_RESOURCE_QUERIES)
   const [resourceRepo, setResourceRepo] = useState('')
   const [unlinkKey, setUnlinkKey] = useState('')
   const [footerJoke, setFooterJoke] = useState(() => pickRandomJoke())
@@ -154,6 +206,10 @@ function App() {
     status: '檢查狀態',
     list: '工具清單',
     backups: '備份清單',
+    'list-skills': '技能清單',
+    'list-rules': '規則清單',
+    'list-commands': '命令清單',
+    'list-agents': '代理清單',
     relink: '重建連結',
     clean: '清理備份',
     upgrade: '升級版本',
@@ -258,6 +314,18 @@ function App() {
           )
           setHasBackupsQueried(true)
         }
+
+        if (action === 'list-skills' || action === 'list-rules' || action === 'list-commands' || action === 'list-agents') {
+          const parsedResources = parseGlobalResourceListOutput(response.output)
+          setResourceSummary((prev) => ({
+            ...prev,
+            [action]: parsedResources,
+          }))
+          setHasResourceQueried((prev) => ({
+            ...prev,
+            [action]: true,
+          }))
+        }
       } else {
         setStatus('失敗')
         addLog('error', `命令失敗，exit code: ${response.exitCode ?? 'unknown'}`)
@@ -334,6 +402,10 @@ function App() {
     await runCommand({ action: 'unlink', key: unlinkKey.trim() })
   }
 
+  const handleResourceList = async (action: ResourceListAction) => {
+    await runCommand({ action })
+  }
+
   const openGithubRepo = () => {
     // Tauri WebView 透過 window.open 可交由系統預設瀏覽器處理外部連結
     window.open('https://github.com/lazyjerry/ai-global', '_blank', 'noopener,noreferrer')
@@ -363,6 +435,51 @@ function App() {
     inactive: '未找到',
     checking: '偵測中',
   }
+
+  const renderGlobalResourceSection = () => (
+    <section className="resource-window">
+      <header className="insight-header">
+        <span className="insight-title">全域資源清單</span>
+      </header>
+      <div className="resource-body">
+        <ul className="insight-list">
+          {globalResourceHelpLines.map((line) => (<li key={line}>{line}</li>))}
+        </ul>
+        <div className="resource-actions">
+          {RESOURCE_LIST_ORDER.map((action) => (
+            <button
+              key={action}
+              className="resource-btn"
+              onClick={() => { void handleResourceList(action) }}
+              disabled={loading}
+            >
+              {RESOURCE_LIST_META[action].button}
+            </button>
+          ))}
+        </div>
+        <div className="resource-list-grid">
+          {RESOURCE_LIST_ORDER.map((action) => {
+            const meta = RESOURCE_LIST_META[action]
+            const items = resourceSummary[action]
+            const queried = hasResourceQueried[action]
+
+            return (
+              <section key={action} className="resource-list-card">
+                <h4>{meta.title}</h4>
+                {!queried || items.length === 0 ? (
+                  <p className="insight-empty">{meta.empty}</p>
+                ) : (
+                  <ul className="insight-list">
+                    {items.map((item) => (<li key={`${action}-${item}`}>{item}</li>))}
+                  </ul>
+                )}
+              </section>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
 
   return (
     <div className="app">
@@ -576,6 +693,8 @@ function App() {
                 </div>
               </section>
 
+              {renderGlobalResourceSection()}
+
               <OutputConsole logs={logs} />
             </div>
           )}
@@ -583,6 +702,7 @@ function App() {
           {activeTab === 'tools' && (
             <div className="tab-content tab-content-tools">
               <Tools tools={tools} />
+              {renderGlobalResourceSection()}
             </div>
           )}
 

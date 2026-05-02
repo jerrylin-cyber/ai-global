@@ -13,7 +13,7 @@ describe('tauriClient.executeCommand', () => {
     invokeMock.mockReset()
   })
 
-  it.each<AllowedAction>(['status', 'list', 'backups', 'relink', 'clean', 'upgrade', 'unlink', 'add-skill', 'add-rule', 'add-command'])(
+  it.each<AllowedAction>(['status', 'list', 'backups', 'list-skills', 'list-rules', 'list-commands', 'list-agents', 'relink', 'clean', 'upgrade', 'unlink', 'add-skill', 'add-rule', 'add-command'])(
     'forwards %s to Tauri invoke on success',
     async (action) => {
       const response: CommandResponse = {
@@ -33,7 +33,7 @@ describe('tauriClient.executeCommand', () => {
     },
   )
 
-  it.each<AllowedAction>(['status', 'list', 'backups', 'relink', 'clean', 'upgrade', 'unlink', 'add-skill', 'add-rule', 'add-command'])(
+  it.each<AllowedAction>(['status', 'list', 'backups', 'list-skills', 'list-rules', 'list-commands', 'list-agents', 'relink', 'clean', 'upgrade', 'unlink', 'add-skill', 'add-rule', 'add-command'])(
     'wraps invoke errors for %s',
     async (action) => {
       invokeMock.mockRejectedValue(new Error('backend failed'))

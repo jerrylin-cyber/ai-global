@@ -23,6 +23,18 @@ impl CommandMapper {
             AllowedAction::Backups => {
                 // ai-global backups
             }
+            AllowedAction::ListSkills => {
+                // ai-global list-skills
+            }
+            AllowedAction::ListRules => {
+                // ai-global list-rules
+            }
+            AllowedAction::ListCommands => {
+                // ai-global list-commands
+            }
+            AllowedAction::ListAgents => {
+                // ai-global list-agents
+            }
             AllowedAction::Relink => {
                 // ai-global relink
             }
@@ -81,6 +93,10 @@ impl CommandMapper {
             AllowedAction::Status => "Check status of installed tools",
             AllowedAction::List => "List all installed tools",
             AllowedAction::Backups => "List available backups",
+            AllowedAction::ListSkills => "List global skills",
+            AllowedAction::ListRules => "List global rules",
+            AllowedAction::ListCommands => "List global commands",
+            AllowedAction::ListAgents => "List global agents",
             AllowedAction::Relink => "Relink a tool to a repository",
             AllowedAction::Clean => "Clean up unused tools",
             AllowedAction::Upgrade => "Upgrade installed tools",
@@ -97,6 +113,10 @@ impl CommandMapper {
             AllowedAction::Status => vec![],
             AllowedAction::List => vec![],
             AllowedAction::Backups => vec![],
+            AllowedAction::ListSkills => vec![],
+            AllowedAction::ListRules => vec![],
+            AllowedAction::ListCommands => vec![],
+            AllowedAction::ListAgents => vec![],
             AllowedAction::Relink => vec![],
             AllowedAction::Clean => vec![],
             AllowedAction::Upgrade => vec![],
@@ -113,6 +133,10 @@ impl CommandMapper {
             AllowedAction::Status => vec!["key"],
             AllowedAction::List => vec![],
             AllowedAction::Backups => vec![],
+            AllowedAction::ListSkills => vec![],
+            AllowedAction::ListRules => vec![],
+            AllowedAction::ListCommands => vec![],
+            AllowedAction::ListAgents => vec![],
             AllowedAction::Relink => vec![],
             AllowedAction::Clean => vec!["key"],
             AllowedAction::Upgrade => vec!["key"],

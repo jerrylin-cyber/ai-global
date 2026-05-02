@@ -19,7 +19,7 @@ function stripAnsi(str: string): string {
 
 const TYPE_LABEL: Record<LogEntry['type'], string> = {
   stdout: 'OUT',
-  stderr: 'ERR',
+  stderr: 'STDERR',
   info:   'INFO',
   error:  'FAIL',
 }

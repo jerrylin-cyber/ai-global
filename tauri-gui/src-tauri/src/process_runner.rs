@@ -15,7 +15,9 @@ pub struct ProcessRunner;
 impl ProcessRunner {
     /// Resolve ai-global executable path with fallback strategy
     pub fn resolve_executable() -> Result<String, String> {
+        let workspace_script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../ai-global");
         let paths = vec![
+            workspace_script,
             PathBuf::from(shellexpand::tilde("~/.local/bin/ai-global").as_ref()),
             PathBuf::from(shellexpand::tilde("~/.ai-global/ai-global").as_ref()),
             PathBuf::from("/usr/local/bin/ai-global"),

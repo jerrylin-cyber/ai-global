@@ -4,6 +4,10 @@ export type AllowedAction =
   | 'status'
   | 'list'
   | 'backups'
+  | 'list-skills'
+  | 'list-rules'
+  | 'list-commands'
+  | 'list-agents'
   | 'relink'
   | 'clean'
   | 'upgrade'
@@ -11,6 +15,12 @@ export type AllowedAction =
   | 'add-skill'
   | 'add-rule'
   | 'add-command'
+
+export type ResourceListAction =
+  | 'list-skills'
+  | 'list-rules'
+  | 'list-commands'
+  | 'list-agents'
 
 export interface CommandRequest {
   action: AllowedAction
@@ -40,7 +50,16 @@ export const MVP_ACTIONS: AllowedAction[] = ['status', 'list', 'relink', 'clean'
 
 export const SAFE_ACTIONS: AllowedAction[] = ['status', 'list', 'backups']
 
-export const RESOURCE_ACTIONS: AllowedAction[] = ['add-skill', 'add-rule', 'add-command', 'unlink']
+export const RESOURCE_ACTIONS: AllowedAction[] = [
+  'add-skill',
+  'add-rule',
+  'add-command',
+  'list-skills',
+  'list-rules',
+  'list-commands',
+  'list-agents',
+  'unlink',
+]
 
 export const MAINTENANCE_ACTIONS: AllowedAction[] = ['relink', 'clean', 'upgrade']
 

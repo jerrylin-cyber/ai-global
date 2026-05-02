@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractVersionFromPath, parseToolsFromListOutput, stripAnsi } from './tooling'
+import { extractVersionFromPath, parseGlobalResourceListOutput, parseToolsFromListOutput, stripAnsi } from './tooling'
 
 describe('tooling helpers', () => {
   it('strips ansi escape sequences', () => {
@@ -17,6 +17,19 @@ describe('tooling helpers', () => {
       { name: 'Claude Code', status: 'active', version: 'claude' },
       { name: 'Codex CLI', status: 'inactive', version: 'codex' },
     ])
+  })
+
+  it('parses ai-global list-skills style output into resource rows', () => {
+    const output = [
+      '  \u001b[34m[INFO]\u001b[0m 目錄: ~/.ai-global/skills',
+      '',
+      '  \u001b[34mskills 列表\u001b[0m',
+      '  ----------------------------------------------------------------------',
+      '  custom-skill/',
+      '  helper.md',
+    ].join('\n')
+
+    expect(parseGlobalResourceListOutput(output)).toEqual(['custom-skill/', 'helper.md'])
   })
 
   it('normalizes executable path display', () => {

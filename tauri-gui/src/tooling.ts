@@ -24,6 +24,20 @@ export const parseToolsFromListOutput = (output: string): ToolItem[] => {
     })
 }
 
+export const parseGlobalResourceListOutput = (output: string): string[] => {
+  return output
+    .split('\n')
+    .map(stripAnsi)
+    .map((line) => line.trim())
+    .map((line) => line.replace(/^\[(INFO|WARN|ERROR|ERR|OUT)\]\s*/i, ''))
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^[-_=]{3,}$/.test(line))
+    .filter((line) => !/^目錄:/.test(line))
+    .filter((line) => !/ 列表$/.test(line))
+    .filter((line) => !/^未找到任何 /.test(line))
+    .filter((line) => !/^目錄不存在:/.test(line))
+}
+
 export const extractVersionFromPath = (path: string) => {
   if (path.includes('.ai-global') || path.includes('.local/bin')) {
     return 'installed'

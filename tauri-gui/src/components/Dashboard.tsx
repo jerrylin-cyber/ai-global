@@ -83,6 +83,48 @@ const ACTION_MAP: Record<AllowedAction, ActionDef> = {
       </svg>
     ),
   },
+  'list-skills': {
+    label: 'Skills 清單',
+    desc: '列出全域 skills',
+    risky: false,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M4 6.5h10M4 9h7M4 11.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  'list-rules': {
+    label: 'Rules 清單',
+    desc: '列出全域 rules',
+    risky: false,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M5 4.5h8M5 8h8M5 11.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  'list-commands': {
+    label: 'Commands 清單',
+    desc: '列出全域 commands',
+    risky: false,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M4 5.5L7 8.5 4 11.5M9 11.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  'list-agents': {
+    label: 'Agents 清單',
+    desc: '列出全域 agents',
+    risky: false,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="6" cy="6" r="2" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="12" cy="12" r="2" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M7.5 7.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
   unlink: {
     label: '還原連結',
     desc: '還原指定工具設定（高風險）',

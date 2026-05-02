@@ -63,7 +63,7 @@
 }
 
 .log-type {
-  min-width: 38px;
+  min-width: 52px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -73,7 +73,7 @@
 }
 
 .log-type.type-stdout { color: var(--success); }
-.log-type.type-stderr { color: var(--danger); }
+.log-type.type-stderr { color: var(--warning); }
 .log-type.type-info   { color: var(--primary); }
 .log-type.type-error  { color: var(--danger); }
 
@@ -83,7 +83,7 @@
   word-break: break-all;
 }
 
-.log-line.stderr .log-message { color: #f97583; }
+.log-line.stderr .log-message { color: var(--warning); }
 .log-line.error  .log-message { color: var(--danger); }
 .log-line.info   .log-message { color: var(--text-dim); }
 .log-line.stdout .log-message { color: var(--text); }
