@@ -783,27 +783,77 @@ download_from_github() {
 
         # === 安裝階段 ===
         local resource_count=0
+        local -a _installed_names=()
 
         case "$_install_mode" in
           meta_root)
             local file_dir="$target_dir/${_install_names[0]}"
-            mkdir -p -- "$file_dir"
-            cp -R -- "${_install_sources[0]}"/* "$file_dir/"
-            resource_count=1
+            local should_install=true
+
+            if [[ -d "$file_dir" ]]; then
+              log_warn "目標資料夾已存在: $(beautify_dir "$file_dir")"
+              read -r -p "是否覆蓋 ${_install_names[0]}？[y/N] " _overwrite
+              _overwrite="${_overwrite:-N}"
+
+              if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+                rm -rf -- "$file_dir"
+              else
+                log_info "已跳過 ${_install_names[0]}"
+                should_install=false
+              fi
+            fi
+
+            if [[ "$should_install" == true ]]; then
+              mkdir -p -- "$file_dir"
+              cp -R -- "${_install_sources[0]}"/* "$file_dir/"
+              echo "  - ${_install_names[0]}"
+              resource_count=1
+              _installed_names+=("${_install_names[0]}")
+            fi
             ;;
           meta_sub)
             for _i in "${!_install_sources[@]}"; do
-              mkdir -p -- "$target_dir/${_install_names[$_i]}"
-              cp -R -- "${_install_sources[$_i]}"/* "$target_dir/${_install_names[$_i]}/"
+              local install_dir="$target_dir/${_install_names[$_i]}"
+
+              if [[ -d "$install_dir" ]]; then
+                log_warn "目標資料夾已存在: $(beautify_dir "$install_dir")"
+                read -r -p "是否覆蓋 ${_install_names[$_i]}？[y/N] " _overwrite
+                _overwrite="${_overwrite:-N}"
+
+                if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+                  rm -rf -- "$install_dir"
+                else
+                  log_info "已跳過 ${_install_names[$_i]}"
+                  continue
+                fi
+              fi
+
+              mkdir -p -- "$install_dir"
+              cp -R -- "${_install_sources[$_i]}"/* "$install_dir/"
               echo "  - ${_install_names[$_i]}"
               ((resource_count++))
+              _installed_names+=("${_install_names[$_i]}")
             done
             ;;
           files)
             for _i in "${!_install_sources[@]}"; do
+              local target_file="$target_dir/${_install_names[$_i]}"
+
+              if [[ -f "$target_file" ]]; then
+                log_warn "目標檔案已存在: $(beautify_dir "$target_file")"
+                read -r -p "是否覆蓋 ${_install_names[$_i]}？[y/N] " _overwrite
+                _overwrite="${_overwrite:-N}"
+
+                if [[ ! "$_overwrite" =~ ^[Yy]$ ]]; then
+                  log_info "已跳過 ${_install_names[$_i]}"
+                  continue
+                fi
+              fi
+
               cp -- "${_install_sources[$_i]}" "$target_dir/" 2> /dev/null || true
               echo "  - ${_install_names[$_i]}"
               ((resource_count++))
+              _installed_names+=("${_install_names[$_i]}")
             done
             ;;
         esac
@@ -813,22 +863,28 @@ download_from_github() {
         local github_url="https://github.com/$owner/$repo"
         case "$_install_mode" in
           meta_root)
-            echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[0]}")" >> "$source_file"
+            if [[ ${#_installed_names[@]} -gt 0 ]]; then
+              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_installed_names[0]}")" >> "$source_file"
+            fi
             ;;
           meta_sub)
-            for _i in "${!_install_names[@]}"; do
-              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[$_i]}")" >> "$source_file"
+            for _name in "${_installed_names[@]}"; do
+              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_name}")" >> "$source_file"
             done
             ;;
           files)
-            for _i in "${!_install_names[@]}"; do
-              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_install_names[$_i]}")" >> "$source_file"
+            for _name in "${_installed_names[@]}"; do
+              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_name}")" >> "$source_file"
             done
             ;;
         esac
 
         echo ""
-        log_ok "已從 $owner/$repo 新增 $resource_count 個 $resource_label 至 $(beautify_dir "$target_dir")"
+        if [[ "$resource_count" -gt 0 ]]; then
+          log_ok "已從 $owner/$repo 新增 $resource_count 個 $resource_label 至 $(beautify_dir "$target_dir")"
+        else
+          log_info "未新增任何 $resource_label"
+        fi
       else
         local searched_dir="${source_node#$tmp_dir/$repo}"
         searched_dir="${searched_dir#/}"
