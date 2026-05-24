@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.7.0"
+VERSION="2.7.1"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -19,8 +19,7 @@ declare -a KNOWN_PATTERNS=(
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|.|skills|.|\\033[38;5;220m"
-  ".opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
-  ".windsurf, .codeium/windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
+  ".config/opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
 )
 
 # 專案模式使用的 AI 工具設定模式
@@ -34,7 +33,6 @@ declare -a PROJECT_KNOWN_PATTERNS=(
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|commands|skills|.|\\033[38;5;220m"
   ".opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
-  ".windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
 )
 
 # 互動式選單項目
