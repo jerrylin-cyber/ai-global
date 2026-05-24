@@ -29,7 +29,7 @@ declare -a PROJECT_KNOWN_PATTERNS=(
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
   ".agents|codex-skills|Codex Skills|.|.|.|skills|.|\\033[38;5;9m"
   ".codex|codex|Codex CLI|.|.|.|.|agents|\\033[38;5;9m"
-  ".github|copilot|Copilot CLI|copilot-instructions.md|instructions|prompts|.|.|\\033[38;5;45m"
+  ".github|copilot|Copilot CLI|copilot-instructions.md|instructions|prompts|skills|agents|\\033[38;5;45m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|commands|skills|.|\\033[38;5;220m"
@@ -149,6 +149,146 @@ tool_type_path() {
   fi
 }
 
+global_tool_installed() {
+  local project_key="$1"
+  local project_tool_node="$2"
+  local global_key="${project_key%-skills}"
+
+  if [[ -d "$HOME/$project_tool_node" ]]; then
+    return 0
+  fi
+
+  local pattern
+  for pattern in "${KNOWN_PATTERNS[@]}"; do
+    parse_pattern "$pattern"
+    [[ "$key" != "$global_key" ]] && continue
+
+    local global_tool_node
+    for global_tool_node in "${node_array[@]}"; do
+      if [[ -d "$HOME/$global_tool_node" ]]; then
+        return 0
+      fi
+    done
+  done
+
+  return 1
+}
+
+add_unique_dir() {
+  local dir="$1"
+  shift
+  local existing
+  for existing in "$@"; do
+    [[ "$existing" == "$dir" ]] && return 1
+  done
+  return 0
+}
+
+ensure_project_tool_dirs() {
+  local base_dir="$1"
+  local auto_dirs=()
+  local confirm_dirs=()
+
+  for pattern in "${PROJECT_KNOWN_PATTERNS[@]}"; do
+    parse_pattern "$pattern"
+    local project_key="$key"
+    for tool_node in "${node_array[@]}"; do
+      [[ "$tool_node" == "." ]] && continue
+      if [[ ! -e "$base_dir/$tool_node" ]]; then
+        if global_tool_installed "$project_key" "$tool_node"; then
+          add_unique_dir "$tool_node" "${auto_dirs[@]}" && auto_dirs+=("$tool_node")
+        else
+          add_unique_dir "$tool_node" "${confirm_dirs[@]}" && confirm_dirs+=("$tool_node")
+        fi
+      elif [[ ! -d "$base_dir/$tool_node" ]]; then
+        log_warn "不是目錄，略過建立: $(beautify_dir "$base_dir/$tool_node")"
+      fi
+    done
+  done
+
+  if [[ ${#auto_dirs[@]} -eq 0 ]] && [[ ${#confirm_dirs[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  local missing_dir
+  if [[ ${#auto_dirs[@]} -gt 0 ]]; then
+    log_info "全域已安裝的工具缺少專案目錄，將直接建立:"
+    for missing_dir in "${auto_dirs[@]}"; do
+      echo "  - $(beautify_dir "$base_dir/$missing_dir")"
+    done
+
+    for missing_dir in "${auto_dirs[@]}"; do
+      mkdir -p -- "$base_dir/$missing_dir"
+      log_ok "已建立: $(beautify_dir "$base_dir/$missing_dir")"
+    done
+    echo ""
+  fi
+
+  if [[ ${#confirm_dirs[@]} -gt 0 ]]; then
+    log_warn "全域未偵測到對應工具，專案模式缺少以下目錄:"
+    for missing_dir in "${confirm_dirs[@]}"; do
+      echo "  - $(beautify_dir "$base_dir/$missing_dir")"
+    done
+
+    read -r -p "是否仍要建立以上目錄?[y/N] " _reply
+    _reply="${_reply:-N}"
+    if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+      log_info "已略過建立未安裝工具的專案目錄"
+      echo ""
+      return 0
+    fi
+
+    for missing_dir in "${confirm_dirs[@]}"; do
+      mkdir -p -- "$base_dir/$missing_dir"
+      log_ok "已建立: $(beautify_dir "$base_dir/$missing_dir")"
+    done
+    echo ""
+  fi
+}
+
+copy_project_resource_dir() {
+  local type_dir="$1"
+  local target_dir="$2"
+  local tool_name="$3"
+  local type_node="$4"
+
+  if [[ ! -d "$type_dir" ]]; then
+    log_warn "不是目錄，略過複製與連結: $(beautify_dir "$type_dir")"
+    return 1
+  fi
+
+  log_warn "專案模式偵測到既有目錄: $(beautify_dir "$type_dir")"
+  log_warn "將備份原目錄，並可複製一份至 $(beautify_dir "$target_dir")"
+  read -r -p "是否複製 $tool_name 的 $type_node?[y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+    log_info "已略過複製與連結: $(beautify_dir "$type_dir")"
+    return 1
+  fi
+
+  while IFS= read -r -d '' -u 3 file_dir; do
+    local target_file="$target_dir/${file_dir#$type_dir/}"
+    if [[ -d "$target_file" ]]; then
+      log_warn "目標是目錄，略過: $(beautify_dir "$target_file")"
+      continue
+    elif [[ -e "$target_file" ]]; then
+      log_warn "目標已存在: $(beautify_dir "$target_file")"
+      read -r -p "是否覆蓋?[y/N] " _overwrite
+      _overwrite="${_overwrite:-N}"
+      if [[ ! "$_overwrite" =~ ^[Yy]$ ]]; then
+        log_info "已略過: $(beautify_dir "$target_file")"
+        continue
+      fi
+    fi
+
+    mkdir -p "$(dirname "$target_file")" 2> /dev/null
+    cp -- "$file_dir" "$target_file" 2> /dev/null || true
+  done 3< <(find "$type_dir" -type f -print0 2> /dev/null)
+
+  return 0
+}
+
 # 確認特定資源類型是否已有任何工具的 symlink 指向 .ai-global
 check_type_linked() {
   local base_dir="$1"
@@ -229,8 +369,8 @@ prepare_run_base_dir() {
   fi
 
   log_warn "將目前目錄視為專案目錄: $(beautify_dir "$current_dir")"
-  read -r -p "是否繼續？[y/N] " _reply
-  _reply="${_reply:-N}"
+  read -r -p "是否繼續?[Y/n] " _reply
+  _reply="${_reply:-Y}"
 
   if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
     log_info "已取消"
@@ -301,6 +441,8 @@ update_links() {
 
             # 若非 symlink，則建立 symlink
             if [[ ! -L "$type_dir" ]]; then
+              local should_link=true
+
               # 若目錄已存在，備份、複製、移除
               if [[ -e "$type_dir" ]]; then
                 # 備份
@@ -317,30 +459,38 @@ update_links() {
                     echo "" >> "$target_dir"
                   fi
                 else
-                  # 若共用目錄已有其他工具的檔案，發出警告
-                  local existing_count
-                  existing_count=$(find "$target_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
-                  if [[ "$existing_count" -gt 0 ]]; then
-                    log_warn "共用目錄 $(beautify_dir "$target_dir") 已有 $existing_count 個檔案"
-                    log_warn "來自 ${color}$name${NC}${YELLOW} 的檔案將合併至共用目錄${NC}"
-                  fi
+                  if [[ "$PROJECT_MODE" == true ]]; then
+                    copy_project_resource_dir "$type_dir" "$target_dir" "$name" "$type_node" || should_link=false
+                  else
+                    # 若共用目錄已有其他工具的檔案，發出警告
+                    local existing_count
+                    existing_count=$(find "$target_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
+                    if [[ "$existing_count" -gt 0 ]]; then
+                      log_warn "共用目錄 $(beautify_dir "$target_dir") 已有 $existing_count 個檔案"
+                      log_warn "來自 ${color}$name${NC}${YELLOW} 的檔案將合併至共用目錄${NC}"
+                    fi
 
-                  # 複製所有檔案（若存在則覆蓋）
-                  find "$type_dir" -type f -print0 2> /dev/null | while IFS= read -r -d '' file_dir; do
-                    local target_file="$target_dir/${file_dir#$type_dir/}"
-                    mkdir -p "$(dirname "$target_file")" 2> /dev/null
-                    cp -- "$file_dir" "$target_file" 2> /dev/null || true
-                  done
+                    # 複製所有檔案（若存在則覆蓋）
+                    find "$type_dir" -type f -print0 2> /dev/null | while IFS= read -r -d '' file_dir; do
+                      local target_file="$target_dir/${file_dir#$type_dir/}"
+                      mkdir -p "$(dirname "$target_file")" 2> /dev/null
+                      cp -- "$file_dir" "$target_file" 2> /dev/null || true
+                    done
+                  fi
                 fi
 
                 # 移除
-                rm -rf -- "$type_dir"
+                [[ "$should_link" == true ]] && rm -rf -- "$type_dir"
               fi
 
-              # 無論是否存在都建立 symlink
-              mkdir -p "$(dirname "$type_dir")" 2> /dev/null
-              ln -s -- "$target_dir" "$type_dir"
+              # 建立 symlink
+              if [[ "$should_link" == true ]]; then
+                mkdir -p "$(dirname "$type_dir")" 2> /dev/null
+                ln -s -- "$target_dir" "$type_dir"
+              fi
             fi
+
+            [[ ! -L "$type_dir" ]] && continue
 
             # 顯示 symlink
             local src_dir=$(beautify_dir "$type_dir")
@@ -371,7 +521,7 @@ update_links() {
   if [[ "$is_new_agents_md" == true ]]; then
     if [[ -f "$agents_md_dir" ]] && ! grep -q '[^[:space:]]' "$agents_md_dir" 2> /dev/null; then
       cat > "$agents_md_dir" << 'EOF'
-# AI 程式助手
+# AI 工具指令
 
 <!-- 在此加入您的提示詞，將同步至所有 AI 工具。 -->
 EOF
@@ -666,6 +816,10 @@ relink_all() {
   log_info "正在重建所有 symlink..."
   echo ""
 
+  if [[ "$PROJECT_MODE" == true ]]; then
+    ensure_project_tool_dirs "$base_dir"
+  fi
+
   # 僅移除 symlink，不還原備份、不刪除備份
   for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
@@ -923,7 +1077,7 @@ download_from_github() {
         echo ""
         log_info "安裝目標: $(beautify_dir "$target_dir")"
         log_warn "請確認您已對此倉庫進行安全掃描"
-        read -r -p "是否安裝？[Y/n] " _reply
+        read -r -p "是否安裝?[Y/n] " _reply
         _reply="${_reply:-Y}"
 
         if [[ ! "$_reply" =~ ^[Yy] ]]; then
@@ -943,7 +1097,7 @@ download_from_github() {
 
             if [[ -d "$file_dir" ]]; then
               log_warn "目標資料夾已存在: $(beautify_dir "$file_dir")"
-              read -r -p "是否覆蓋 ${_install_names[0]}？[y/N] " _overwrite
+              read -r -p "是否覆蓋 ${_install_names[0]}?[y/N] " _overwrite
               _overwrite="${_overwrite:-N}"
 
               if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
@@ -968,7 +1122,7 @@ download_from_github() {
 
               if [[ -d "$install_dir" ]]; then
                 log_warn "目標資料夾已存在: $(beautify_dir "$install_dir")"
-                read -r -p "是否覆蓋 ${_install_names[$_i]}？[y/N] " _overwrite
+                read -r -p "是否覆蓋 ${_install_names[$_i]}?[y/N] " _overwrite
                 _overwrite="${_overwrite:-N}"
 
                 if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
@@ -992,7 +1146,7 @@ download_from_github() {
 
               if [[ -f "$target_file" ]]; then
                 log_warn "目標檔案已存在: $(beautify_dir "$target_file")"
-                read -r -p "是否覆蓋 ${_install_names[$_i]}？[y/N] " _overwrite
+                read -r -p "是否覆蓋 ${_install_names[$_i]}?[y/N] " _overwrite
                 _overwrite="${_overwrite:-N}"
 
                 if [[ ! "$_overwrite" =~ ^[Yy]$ ]]; then

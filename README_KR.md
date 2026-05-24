@@ -47,29 +47,6 @@ yarn global add ai-global
 # 또는
 bun add -g ai-global
 ```
-
-### tauri-gui（데스크톱 GUI）
-
-Tauri v2 + React로 빌드된 데스크톱 GUI로, `status`、`list`、`relink`、`clean`、`upgrade` 다섯 가지 작업 화면을 제공합니다.
-
-**시스템 요구 사항：** Node.js ≥ 18、Rust stable（≥ 1.75）、ai-global이 설치되어 `$PATH`에 있을 것
-
-```bash
-# Rust 설치（미설치 시）
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-
-# 저장소 클론 후 tauri-gui 디렉토리로 이동
-git clone https://github.com/lazyjerry/ai-global.git
-cd ai-global/tauri-gui
-npm install
-
-# 릴리즈 빌드（macOS 출력: src-tauri/target/release/bundle/macos/ai-global GUI.app）
-npm run build
-```
-
-개발 모드：`npm run dev`（Vite dev server + Tauri 창 실행）
-
 ---
 
 ## 사용법

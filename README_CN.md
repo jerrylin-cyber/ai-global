@@ -47,29 +47,6 @@ yarn global add ai-global
 # 或
 bun add -g ai-global
 ```
-
-### tauri-gui（桌面图形界面）
-
-以 Tauri v2 + React 打包的桌面 GUI，提供 `status`、`list`、`relink`、`clean`、`upgrade` 五个操作界面。
-
-**系统需求：** Node.js ≥ 18、Rust stable（≥ 1.75）、ai-global 已安装并在 `$PATH`
-
-```bash
-# 安装 Rust（若尚未安装）
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-
-# 克隆并进入 tauri-gui 目录
-git clone https://github.com/lazyjerry/ai-global.git
-cd ai-global/tauri-gui
-npm install
-
-# 构建正式版（macOS 输出：src-tauri/target/release/bundle/macos/ai-global GUI.app）
-npm run build
-```
-
-开发模式：`npm run dev`（启动 Vite dev server + Tauri 窗口）
-
 ---
 
 ## 使用方法

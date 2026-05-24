@@ -47,29 +47,6 @@ yarn global add ai-global
 # 或
 bun add -g ai-global
 ```
-
-### tauri-gui（桌面圖形介面）
-
-以 Tauri v2 + React 打包的桌面 GUI，提供 `status`、`list`、`relink`、`clean`、`upgrade` 五個操作介面。
-
-**系統需求：** Node.js ≥ 18、Rust stable（≥ 1.75）、ai-global 已安裝並在 `$PATH`
-
-```bash
-# 安裝 Rust（若尚未安裝）
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-
-# 克隆並進入 tauri-gui 目錄
-git clone https://github.com/lazyjerry/ai-global.git
-cd ai-global/tauri-gui
-npm install
-
-# 建置正式版（macOS 產出：src-tauri/target/release/bundle/macos/ai-global GUI.app）
-npm run build
-```
-
-開發模式：`npm run dev`（啟動 Vite dev server + Tauri 視窗）
-
 ---
 
 ## 使用方法
@@ -132,8 +109,8 @@ ai-global -p add-skill <user/repo>
 | 工具 | 專案模式位置 |
 | ---- | ------------ |
 | Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
-| Clawdbot Code | `.clawdbot/AGENTS.md`、`.clawdbot/skills/`、`.clawdbot/subagents/` |
-| Codex CLI | `.codex/AGENTS.md`、`.codex/skills/`、`.codex/agents/` |
+| Codex Skills | `.agents/skills/` |
+| Codex CLI | `.codex/agents/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
 | Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
 | Antigravity | `.gemini/GEMINI.md`、`.gemini/antigravity/skills/` |
