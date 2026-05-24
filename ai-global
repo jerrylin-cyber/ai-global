@@ -51,6 +51,7 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 PROJECT_MODE=false
+PROJECT_MODE_AUTO=false
 RUN_BASE_DIR="$HOME"
 declare -a ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
 
@@ -101,7 +102,7 @@ show_help() {
   echo -e "  ${GRAY}備註: add-* 安裝至 .ai-global/ 中央目錄，透過 relink 建立的 symlink 自動同步至各工具${NC}"
   echo ""
   echo -e "${BLUE}選項:${NC}"
-  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行（支援: list, list-*, relink, unlink, add-*）"
+  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行（支援: update, list, list-*, relink, unlink, add-*）"
   echo ""
   echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
@@ -147,6 +148,73 @@ tool_type_path() {
   else
     echo "$base_dir/$tool_node/$type_node"
   fi
+}
+
+relative_symlink_target() {
+  local base_dir="$1"
+  local link_path="$2"
+  local target_path="$3"
+  local link_parent
+  link_parent=$(dirname "$link_path")
+
+  if [[ "$link_parent" != "$base_dir" ]] && [[ "$link_parent" != "$base_dir/"* ]]; then
+    echo "$target_path"
+    return
+  fi
+
+  if [[ "$target_path" != "$base_dir/"* ]]; then
+    echo "$target_path"
+    return
+  fi
+
+  local parent_rel="${link_parent#$base_dir/}"
+  local target_rel="${target_path#$base_dir/}"
+
+  if [[ "$parent_rel" == "$link_parent" ]] || [[ -z "$parent_rel" ]]; then
+    echo "$target_rel"
+    return
+  fi
+
+  local prefix=""
+  local parent_part
+  IFS='/' read -ra parent_parts <<< "$parent_rel"
+  for parent_part in "${parent_parts[@]}"; do
+    [[ -n "$parent_part" ]] && prefix+="../"
+  done
+
+  echo "${prefix}${target_rel}"
+}
+
+symlink_target_for_mode() {
+  local base_dir="$1"
+  local link_path="$2"
+  local target_path="$3"
+
+  if [[ "$PROJECT_MODE" == true ]]; then
+    relative_symlink_target "$base_dir" "$link_path" "$target_path"
+  else
+    echo "$target_path"
+  fi
+}
+
+ensure_symlink() {
+  local base_dir="$1"
+  local link_path="$2"
+  local target_path="$3"
+  local link_target
+  link_target=$(symlink_target_for_mode "$base_dir" "$link_path" "$target_path")
+
+  if [[ -L "$link_path" ]]; then
+    local current_target
+    current_target=$(readlink "$link_path" 2> /dev/null || true)
+    if [[ "$current_target" == "$link_target" ]]; then
+      return 0
+    fi
+    rm -- "$link_path"
+  fi
+
+  mkdir -p "$(dirname "$link_path")" 2> /dev/null
+  ln -s -- "$link_target" "$link_path"
 }
 
 global_tool_installed() {
@@ -289,6 +357,72 @@ copy_project_resource_dir() {
   return 0
 }
 
+project_managed_paths() {
+  local managed_paths=(".ai-global")
+  local pattern
+
+  for pattern in "${PROJECT_KNOWN_PATTERNS[@]}"; do
+    parse_pattern "$pattern"
+
+    local type_node
+    for tool_node in "${node_array[@]}"; do
+      for type_node in "$agents_md" "$rules" "$commands" "$skills" "$subagents"; do
+        [[ "$type_node" == "." ]] && continue
+        local managed_path
+        if [[ "$tool_node" == "." ]]; then
+          managed_path="$type_node"
+        else
+          managed_path="$tool_node/$type_node"
+        fi
+        add_unique_dir "$managed_path" "${managed_paths[@]}" && managed_paths+=("$managed_path")
+      done
+    done
+  done
+
+  printf '%s\n' "${managed_paths[@]}"
+}
+
+show_project_git_tracking_hint() {
+  local base_dir="$1"
+
+  [[ "$PROJECT_MODE" != true ]] && return 0
+  [[ ! -d "$base_dir/.git" ]] && return 0
+
+  log_warn "偵測到專案目錄有 .git/，ai-global 建立的 symlink 或 .ai-global 可能被 Git 追蹤"
+  read -r -p "是否顯示「取消追蹤 / 添加至 .gitignore 」的建議指令？[y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo "  # 加入 .gitignore"
+  echo "  cat >> .gitignore <<'EOF'"
+  project_managed_paths
+  echo "EOF"
+  echo ""
+  echo "  # 取消追蹤已被 Git 追蹤的 ai-global 專案模式檔案"
+  echo "  git rm -r --cached --ignore-unmatch \\"
+
+  local managed_path
+  local paths
+  local path_count
+  local path_index=0
+  paths=$(project_managed_paths)
+  path_count=$(printf '%s\n' "$paths" | wc -l | tr -d ' ')
+  while IFS= read -r managed_path; do
+    [[ -z "$managed_path" ]] && continue
+    path_index=$((path_index + 1))
+    if [[ "$path_index" -lt "$path_count" ]]; then
+      echo "    $managed_path \\"
+    else
+      echo "    $managed_path"
+    fi
+  done <<< "$paths"
+  echo ""
+}
+
 # 確認特定資源類型是否已有任何工具的 symlink 指向 .ai-global
 check_type_linked() {
   local base_dir="$1"
@@ -325,6 +459,7 @@ check_type_linked() {
 supports_project_mode() {
   local cmd="$1"
   case "$cmd" in
+    update | \
     list | -l | --list | \
     list-skills | -ls | --list-skills | \
     list-rules | -lr | --list-rules | \
@@ -344,23 +479,31 @@ supports_project_mode() {
 prepare_run_base_dir() {
   local cmd="$1"
 
-  if [[ "$PROJECT_MODE" != true ]]; then
-    RUN_BASE_DIR="$HOME"
-    ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
-    return 0
-  fi
-
-  if ! supports_project_mode "$cmd"; then
-    log_error "-p/--project 不支援此指令: $cmd"
-    echo "支援指令: list, list-*, relink, unlink, add-*"
-    echo ""
-    return 1
-  fi
-
   local current_dir
   current_dir=$(pwd -P)
   local home_dir
   home_dir=$(cd "$HOME" && pwd -P)
+
+  if [[ "$PROJECT_MODE" != true ]]; then
+    if [[ "$current_dir" != "$home_dir" ]] && [[ -d "$current_dir/.git" ]] && supports_project_mode "$cmd"; then
+      log_warn "偵測到 Git 專案目錄: $(beautify_dir "$current_dir")"
+      read -r -p "是否切換為專案模式？[y/N] " _reply
+      _reply="${_reply:-N}"
+
+      if [[ "$_reply" =~ ^[Yy]$ ]]; then
+        PROJECT_MODE=true
+        PROJECT_MODE_AUTO=true
+      else
+        RUN_BASE_DIR="$HOME"
+        ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
+        return 0
+      fi
+    else
+      RUN_BASE_DIR="$HOME"
+      ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
+      return 0
+    fi
+  fi
 
   if [[ "$current_dir" == "$home_dir" ]]; then
     log_error "專案模式不能在家目錄執行"
@@ -368,14 +511,25 @@ prepare_run_base_dir() {
     return 1
   fi
 
-  log_warn "將目前目錄視為專案目錄: $(beautify_dir "$current_dir")"
-  read -r -p "是否繼續?[Y/n] " _reply
-  _reply="${_reply:-Y}"
-
-  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
-    log_info "已取消"
+  if ! supports_project_mode "$cmd"; then
+    log_error "-p/--project 不支援此指令: $cmd"
+    echo "支援指令: update, list, list-*, relink, unlink, add-*"
     echo ""
     return 1
+  fi
+
+  if [[ "$PROJECT_MODE" == true ]]; then
+    log_warn "將目前目錄視為專案目錄: $(beautify_dir "$current_dir")"
+    if [[ "$PROJECT_MODE_AUTO" != true ]]; then
+      read -r -p "是否繼續?[Y/n] " _reply
+      _reply="${_reply:-Y}"
+
+      if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+        log_info "已取消"
+        echo ""
+        return 1
+      fi
+    fi
   fi
 
   RUN_BASE_DIR="$current_dir"
@@ -485,9 +639,10 @@ update_links() {
 
               # 建立 symlink
               if [[ "$should_link" == true ]]; then
-                mkdir -p "$(dirname "$type_dir")" 2> /dev/null
-                ln -s -- "$target_dir" "$type_dir"
+                ensure_symlink "$base_dir" "$type_dir" "$target_dir"
               fi
+            elif [[ "$PROJECT_MODE" == true ]]; then
+              ensure_symlink "$base_dir" "$type_dir" "$target_dir"
             fi
 
             [[ ! -L "$type_dir" ]] && continue
@@ -532,6 +687,7 @@ EOF
   fi
 
   log_ok "完成！"
+  show_project_git_tracking_hint "$base_dir"
   echo ""
 }
 
@@ -1469,7 +1625,7 @@ main() {
   prepare_run_base_dir "$cmd" || exit 1
 
   case "$cmd" in
-    update) update_links ;;
+    update) update_links "$RUN_BASE_DIR" ;;
     status | -s | --status) show_status ;;
     list | -l | --list) list_tools "$RUN_BASE_DIR" ;;
     backups | -b | --backups) list_backups ;;

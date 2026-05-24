@@ -92,10 +92,11 @@ ai-global
 
 ### 專案模式
 
-`-p` / `--project` 只支援 `list`、`list-*`、`relink`、`unlink`、`add-*` 指令。使用時會先確認目前目錄不是家目錄，並詢問是否把目前目錄視為專案目錄。
+`-p` / `--project` 只支援 `update`、`list`、`list-*`、`relink`、`unlink`、`add-*` 指令。使用時會先確認目前目錄不是家目錄，並詢問是否把目前目錄視為專案目錄。
 
 ```bash
 ai-global -p list
+ai-global -p update
 ai-global --project list-skills
 ai-global -p relink
 ai-global -p unlink codex
