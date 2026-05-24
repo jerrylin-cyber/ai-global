@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.6.0"
+VERSION="2.7.0"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
