@@ -37,6 +37,35 @@ declare -a PROJECT_KNOWN_PATTERNS=(
   ".windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
 )
 
+# 互動式選單項目
+# 格式：choice|mode|cmd|arg_type|label
+declare -a INTERACTIVE_MENU_ITEMS=(
+  "1|global|update||更新 symlink"
+  "2|global|status||顯示 symlink 狀態"
+  "3|global|list||列出支援工具"
+  "4|global|relink||重建 symlink"
+  "5|global|unlink|key|取消連結工具"
+  "6|global|clean||清理孤立備份"
+  "7|global|list-skills||列出 skills"
+  "8|global|list-rules||列出 rules"
+  "9|global|list-commands||列出 commands"
+  "10|global|list-agents||列出 agents"
+  "11|global|add-skill|repo|新增 skill"
+  "12|global|add-rule|repo|新增 rule"
+  "13|global|add-command|repo|新增 command"
+  "21|project|update||更新 symlink"
+  "22|project|list||列出支援工具"
+  "23|project|relink||重建 symlink"
+  "24|project|unlink|key|取消連結工具"
+  "25|project|list-skills||列出 skills"
+  "26|project|list-rules||列出 rules"
+  "27|project|list-commands||列出 commands"
+  "28|project|list-agents||列出 agents"
+  "29|project|add-skill|repo|新增 skill"
+  "30|project|add-rule|repo|新增 rule"
+  "31|project|add-command|repo|新增 command"
+)
+
 # 顏色
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -52,6 +81,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 PROJECT_MODE=false
 PROJECT_MODE_AUTO=false
+FORCE_GLOBAL_MODE=false
 RUN_BASE_DIR="$HOME"
 declare -a ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
 
@@ -72,17 +102,55 @@ log_context_info() {
   echo ""
 }
 
+format_menu_command() {
+  local mode="$1"
+  local cmd="$2"
+  local arg_type="$3"
+  local prefix="ai-global"
+
+  [[ "$mode" == "project" ]] && prefix="ai-global -p"
+
+  case "$arg_type" in
+    key) echo "$prefix $cmd <key|all>" ;;
+    repo) echo "$prefix $cmd <user/repo>" ;;
+    *) echo "$prefix $cmd" ;;
+  esac
+}
+
+print_menu_items_for_mode() {
+  local mode="$1"
+  local item choice item_mode cmd arg_type label command_ref
+
+  for item in "${INTERACTIVE_MENU_ITEMS[@]}"; do
+    IFS='|' read -r choice item_mode cmd arg_type label <<< "$item"
+    [[ "$item_mode" != "$mode" ]] && continue
+    command_ref=$(format_menu_command "$item_mode" "$cmd" "$arg_type")
+    printf " %2s) %-16s %b%s%b\n" "$choice" "$label" "${GRAY}" "$command_ref" "${NC}"
+  done
+}
+
+print_interactive_reference() {
+  echo -e "${BLUE}互動式選單參考:${NC}"
+  echo -e "  ${BLUE}全域模式 (~/.ai-global)${NC}"
+  print_menu_items_for_mode "global"
+  echo ""
+  echo -e "  ${BLUE}專案模式 (目前目錄 ./.ai-global)${NC}"
+  print_menu_items_for_mode "project"
+  echo ""
+}
+
 # 顯示說明
 show_help() {
   echo -e "${BLUE}AI Global: 統一 AI 工具設定管理器${NC} v$VERSION"
   echo ""
   echo -e "${BLUE}用法:${NC}"
+  echo -e "  ai-global                 互動式選單"
   echo -e "  ai-global [指令]"
   echo -e "  ai-global -p [指令]"
   echo -e "  ai-global --project [指令]"
   echo ""
   echo -e "${BLUE}核心指令:${NC}"
-  echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
+  echo -e "  ${GREEN}update${NC}             掃描、合併、更新 symlink"
   echo -e "  ${GREEN}status, -s${NC}          顯示 symlink 狀態"
   echo -e "  ${GREEN}list, -l${NC}            列出所有支援的 AI 工具"
   echo -e "  ${GREEN}backups, -b${NC}         列出可用備份"
@@ -110,6 +178,7 @@ show_help() {
   echo -e "  ${GREEN}version, -v${NC}         顯示版本"
   echo -e "  ${GREEN}help, -h${NC}            顯示此說明"
   echo ""
+  print_interactive_reference
 }
 
 # 解析工具模式字串
@@ -486,17 +555,23 @@ prepare_run_base_dir() {
 
   if [[ "$PROJECT_MODE" != true ]]; then
     if [[ "$current_dir" != "$home_dir" ]] && [[ -d "$current_dir/.git" ]] && supports_project_mode "$cmd"; then
-      log_warn "偵測到 Git 專案目錄: $(beautify_dir "$current_dir")"
-      read -r -p "是否切換為專案模式？[y/N] " _reply
-      _reply="${_reply:-N}"
-
-      if [[ "$_reply" =~ ^[Yy]$ ]]; then
-        PROJECT_MODE=true
-        PROJECT_MODE_AUTO=true
-      else
+      if [[ "$FORCE_GLOBAL_MODE" == true ]]; then
         RUN_BASE_DIR="$HOME"
         ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
         return 0
+      else
+        log_warn "偵測到 Git 專案目錄: $(beautify_dir "$current_dir")"
+        read -r -p "是否切換為專案模式？[y/N] " _reply
+        _reply="${_reply:-N}"
+
+        if [[ "$_reply" =~ ^[Yy]$ ]]; then
+          PROJECT_MODE=true
+          PROJECT_MODE_AUTO=true
+        else
+          RUN_BASE_DIR="$HOME"
+          ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
+          return 0
+        fi
       fi
     else
       RUN_BASE_DIR="$HOME"
@@ -1598,6 +1673,79 @@ show_version() {
   echo "歡迎使用 ai-global. LazyJerry 版本 $VERSION"
 }
 
+INTERACTIVE_CMD=""
+INTERACTIVE_ARG1=""
+
+set_interactive_command() {
+  local mode="$1"
+  local command="$2"
+  local argument="$3"
+
+  if [[ "$mode" == "project" ]]; then
+    PROJECT_MODE=true
+    PROJECT_MODE_AUTO=true
+  else
+    FORCE_GLOBAL_MODE=true
+  fi
+
+  INTERACTIVE_CMD="$command"
+  INTERACTIVE_ARG1="$argument"
+}
+
+prompt_interactive_arg() {
+  local prompt="$1"
+  local value
+  read -r -p "$prompt" value
+  echo "$value"
+}
+
+show_interactive_menu() {
+  echo -e "${BLUE}AI Global 互動式選單${NC}"
+  echo ""
+  echo -e "${BLUE}全域模式 (~/.ai-global):${NC}"
+  print_menu_items_for_mode "global"
+  echo ""
+  echo -e "${BLUE}專案模式 (目前目錄 ./.ai-global):${NC}"
+  print_menu_items_for_mode "project"
+  echo ""
+  echo "  0) 離開"
+  echo ""
+
+  local choice
+  read -r -p "請選擇: " choice
+
+  if [[ "$choice" == "0" ]]; then
+    log_info "已取消"
+    return 1
+  fi
+
+  local item item_choice mode cmd arg_type label argument
+  for item in "${INTERACTIVE_MENU_ITEMS[@]}"; do
+    IFS='|' read -r item_choice mode cmd arg_type label <<< "$item"
+    [[ "$item_choice" != "$choice" ]] && continue
+
+    case "$arg_type" in
+      key)
+        argument=$(prompt_interactive_arg "工具 key 或 all: ")
+        [[ -z "$argument" ]] && { log_error "未輸入工具 key"; return 1; }
+        ;;
+      repo)
+        argument=$(prompt_interactive_arg "GitHub repo (user/repo): ")
+        [[ -z "$argument" ]] && { log_error "未輸入 GitHub repo"; return 1; }
+        ;;
+      *)
+        argument=""
+        ;;
+    esac
+
+    set_interactive_command "$mode" "$cmd" "$argument"
+    return 0
+  done
+
+  log_error "無效選項: $choice"
+  return 1
+}
+
 # 主程式
 main() {
   local args=()
@@ -1613,6 +1761,12 @@ main() {
         ;;
     esac
   done
+
+  if [[ $# -eq 0 ]]; then
+    show_interactive_menu || exit 1
+    args=("$INTERACTIVE_CMD")
+    [[ -n "$INTERACTIVE_ARG1" ]] && args+=("$INTERACTIVE_ARG1")
+  fi
 
   local cmd="${args[0]}"
   local arg1="${args[1]}"

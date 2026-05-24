@@ -57,6 +57,14 @@ bun add -g ai-global
 ai-global
 ```
 
+不帶參數會進入互動式選單，可選擇全域模式或專案模式的常用操作。
+
+若要直接執行原本的掃描、合併、更新 symlink，請使用：
+
+```bash
+ai-global update
+```
+
 這將會：
 
 1. 掃描已安裝的 AI 工具
@@ -70,7 +78,8 @@ ai-global
 
 | 指令                                     | 說明                             |
 | ---------------------------------------- | -------------------------------- |
-| `ai-global`                              | 掃描、合併、更新符號連結（預設） |
+| `ai-global`                              | 開啟互動式選單                   |
+| `ai-global update`                       | 掃描、合併、更新符號連結         |
 | `ai-global status`                       | 顯示符號連結狀態                 |
 | `ai-global list`                         | 列出支援的工具                   |
 | `ai-global backups`                      | 列出可用的備份                   |
