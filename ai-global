@@ -91,16 +91,17 @@ show_help() {
   echo -e "  ${GREEN}clean, -c${NC}           清理孤立備份"
   echo ""
   echo -e "${BLUE}資源管理:${NC}"
-  echo -e "  ${GREEN}add-skill <user/repo>${NC}    新增 skill (全域)"
-  echo -e "  ${GREEN}add-rule <user/repo>${NC}     新增 rule (全域)"
-  echo -e "  ${GREEN}add-command <user/repo>${NC}  新增 command (全域)"
-  echo -e "  ${GREEN}list-skills, -ls${NC}         列出全域 skills"
-  echo -e "  ${GREEN}list-rules, -lr${NC}          列出全域 rules"
-  echo -e "  ${GREEN}list-commands, -lc${NC}       列出全域 commands"
-  echo -e "  ${GREEN}list-agents, -la${NC}         列出全域 agents"
+  echo -e "  ${GREEN}add-skill <user/repo>${NC}    從 GitHub 安裝 skill 至 .ai-global/skills/"
+  echo -e "  ${GREEN}add-rule <user/repo>${NC}     從 GitHub 安裝 rule 至 .ai-global/rules/"
+  echo -e "  ${GREEN}add-command <user/repo>${NC}  從 GitHub 安裝 command 至 .ai-global/commands/"
+  echo -e "  ${GREEN}list-skills, -ls${NC}         列出 skills"
+  echo -e "  ${GREEN}list-rules, -lr${NC}          列出 rules"
+  echo -e "  ${GREEN}list-commands, -lc${NC}       列出 commands"
+  echo -e "  ${GREEN}list-agents, -la${NC}         列出 agents"
+  echo -e "  ${GRAY}備註: add-* 安裝至 .ai-global/ 中央目錄，透過 relink 建立的 symlink 自動同步至各工具${NC}"
   echo ""
   echo -e "${BLUE}選項:${NC}"
-  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行支援的指令（需確認，且不能是家目錄）"
+  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行（支援: list, list-*, relink, unlink, add-*）"
   echo ""
   echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
@@ -146,6 +147,39 @@ tool_type_path() {
   else
     echo "$base_dir/$tool_node/$type_node"
   fi
+}
+
+# 確認特定資源類型是否已有任何工具的 symlink 指向 .ai-global
+check_type_linked() {
+  local base_dir="$1"
+  local type_name="$2"
+
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
+    parse_pattern "$pattern"
+
+    local type_node
+    case "$type_name" in
+      skills)   type_node="$skills" ;;
+      rules)    type_node="$rules" ;;
+      commands) type_node="$commands" ;;
+      *) continue ;;
+    esac
+    [[ "$type_node" == "." ]] && continue
+
+    for tool_node in "${node_array[@]}"; do
+      local type_dir
+      type_dir=$(tool_type_path "$base_dir" "$tool_node" "$type_node")
+      if [[ -L "$type_dir" ]]; then
+        local target
+        target=$(readlink "$type_dir" 2>/dev/null || true)
+        if [[ "$target" == *".ai-global"* ]]; then
+          return 0
+        fi
+      fi
+    done
+  done
+
+  return 1
 }
 
 supports_project_mode() {
@@ -1061,6 +1095,13 @@ add_skill() {
   log_context_info "$skills_dir" || return
 
   download_from_github "$input" "$skills_dir" "SKILL.md" "skill" "skills skill"
+
+  if ! check_type_linked "$base_dir" "skills"; then
+    echo ""
+    local _relink_hint="ai-global"
+    [[ "$PROJECT_MODE" == true ]] && _relink_hint="ai-global -p"
+    log_warn "尚未建立 skills symlink，請先執行: ${_relink_hint} relink"
+  fi
 }
 
 # 新增 rule 至全域 rules 目錄
@@ -1091,6 +1132,13 @@ add_rule() {
   log_context_info "$rules_dir" || return
 
   download_from_github "$input" "$rules_dir" "RULE.md" "rule" "rules rule"
+
+  if ! check_type_linked "$base_dir" "rules"; then
+    echo ""
+    local _relink_hint="ai-global"
+    [[ "$PROJECT_MODE" == true ]] && _relink_hint="ai-global -p"
+    log_warn "尚未建立 rules symlink，請先執行: ${_relink_hint} relink"
+  fi
 }
 
 # 新增 command 至全域 commands 目錄
@@ -1121,6 +1169,13 @@ add_command() {
   log_context_info "$commands_dir" || return
 
   download_from_github "$input" "$commands_dir" "COMMAND.md" "command" "commands command"
+
+  if ! check_type_linked "$base_dir" "commands"; then
+    echo ""
+    local _relink_hint="ai-global"
+    [[ "$PROJECT_MODE" == true ]] && _relink_hint="ai-global -p"
+    log_warn "尚未建立 commands symlink，請先執行: ${_relink_hint} relink"
+  fi
 }
 
 # 升級
