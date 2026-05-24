@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.5.0"
+VERSION="2.6.0"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -19,8 +19,22 @@ declare -a KNOWN_PATTERNS=(
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
   ".gemini|gemini|Gemini CLI|GEMINI.md|.|.|skills|.|\\033[38;5;220m"
-  ".opencode, .config/opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
+  ".opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
   ".windsurf, .codeium/windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
+)
+
+# 專案模式使用的 AI 工具設定模式
+# 格式同 KNOWN_PATTERNS；只放與專案目錄用途相符的位置
+declare -a PROJECT_KNOWN_PATTERNS=(
+  ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
+  ".agents|codex-skills|Codex Skills|.|.|.|skills|.|\\033[38;5;9m"
+  ".codex|codex|Codex CLI|.|.|.|.|agents|\\033[38;5;9m"
+  ".github|copilot|Copilot CLI|copilot-instructions.md|instructions|prompts|.|.|\\033[38;5;45m"
+  ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
+  ".gemini|antigravity|Antigravity|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
+  ".gemini|gemini|Gemini CLI|GEMINI.md|.|commands|skills|.|\\033[38;5;220m"
+  ".opencode|opencode|OpenCode|AGENTS.md|.|commands|skills|agents|\\033[38;5;225m"
+  ".windsurf|windsurf|Windsurf|AGENTS.md|rules|.|skills|.|\\033[38;5;159m"
 )
 
 # 顏色
@@ -35,6 +49,10 @@ log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_ok() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+PROJECT_MODE=false
+RUN_BASE_DIR="$HOME"
+declare -a ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
 
 # 美化目錄路徑顯示
 beautify_dir() {
@@ -59,6 +77,8 @@ show_help() {
   echo ""
   echo -e "${BLUE}用法:${NC}"
   echo -e "  ai-global [指令]"
+  echo -e "  ai-global -p [指令]"
+  echo -e "  ai-global --project [指令]"
   echo ""
   echo -e "${BLUE}核心指令:${NC}"
   echo -e "  ${GREEN}(預設)${NC}             掃描、合併、更新 symlink (全域)"
@@ -79,6 +99,9 @@ show_help() {
   echo -e "  ${GREEN}list-commands, -lc${NC}       列出全域 commands"
   echo -e "  ${GREEN}list-agents, -la${NC}         列出全域 agents"
   echo ""
+  echo -e "${BLUE}選項:${NC}"
+  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行支援的指令（需確認，且不能是家目錄）"
+  echo ""
   echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
   echo -e "  ${GREEN}uninstall${NC}           完全移除 ai-global"
@@ -93,9 +116,102 @@ parse_pattern() {
   IFS=', ' read -ra node_array <<< "$nodes"
 }
 
+tool_node_exists() {
+  local base_dir="$1"
+  local tool_node="$2"
+  shift 2
+
+  if [[ "$tool_node" != "." ]]; then
+    [[ -d "$base_dir/$tool_node" ]]
+    return
+  fi
+
+  local type_node
+  for type_node in "$@"; do
+    if [[ "$type_node" != "." ]] && [[ -e "$base_dir/$type_node" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+tool_type_path() {
+  local base_dir="$1"
+  local tool_node="$2"
+  local type_node="$3"
+
+  if [[ "$tool_node" == "." ]]; then
+    echo "$base_dir/$type_node"
+  else
+    echo "$base_dir/$tool_node/$type_node"
+  fi
+}
+
+supports_project_mode() {
+  local cmd="$1"
+  case "$cmd" in
+    list | -l | --list | \
+    list-skills | -ls | --list-skills | \
+    list-rules | -lr | --list-rules | \
+    list-commands | -lc | --list-commands | \
+    list-agents | -la | --list-agents | \
+    relink | -r | --relink | \
+    unlink | --unlink | \
+    add-skill | add-rule | add-command)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+prepare_run_base_dir() {
+  local cmd="$1"
+
+  if [[ "$PROJECT_MODE" != true ]]; then
+    RUN_BASE_DIR="$HOME"
+    ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
+    return 0
+  fi
+
+  if ! supports_project_mode "$cmd"; then
+    log_error "-p/--project 不支援此指令: $cmd"
+    echo "支援指令: list, list-*, relink, unlink, add-*"
+    echo ""
+    return 1
+  fi
+
+  local current_dir
+  current_dir=$(pwd -P)
+  local home_dir
+  home_dir=$(cd "$HOME" && pwd -P)
+
+  if [[ "$current_dir" == "$home_dir" ]]; then
+    log_error "專案模式不能在家目錄執行"
+    echo ""
+    return 1
+  fi
+
+  log_warn "將目前目錄視為專案目錄: $(beautify_dir "$current_dir")"
+  read -r -p "是否繼續？[y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+    log_info "已取消"
+    echo ""
+    return 1
+  fi
+
+  RUN_BASE_DIR="$current_dir"
+  ACTIVE_PATTERNS=("${PROJECT_KNOWN_PATTERNS[@]}")
+  return 0
+}
+
 # 更新：掃描、合併、更新 symlink
 update_links() {
-  local base_dir="$HOME"
+  local base_dir="${1:-$HOME}"
   log_context_info "$base_dir" || return
 
   log_info "正在掃描 AI 工具..."
@@ -124,13 +240,13 @@ update_links() {
   # 建立目錄
   mkdir -p "$rules_dir" "$commands_dir" "$skills_dir" "$subagents_dir" "$backups_dir"
 
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
 
-      if [[ -d "$tool_dir" ]]; then
+      if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
         total_tools=$((total_tools + 1))
 
         echo ""
@@ -146,7 +262,8 @@ update_links() {
           local target_dir="${_type_targets[$_ti]}"
 
           if [[ "$type_node" != "." ]]; then
-            local type_dir="$tool_dir/$type_node"
+            local type_dir
+            type_dir=$(tool_type_path "$base_dir" "$tool_node" "$type_node")
 
             # 若非 symlink，則建立 symlink
             if [[ ! -L "$type_dir" ]]; then
@@ -187,6 +304,7 @@ update_links() {
               fi
 
               # 無論是否存在都建立 symlink
+              mkdir -p "$(dirname "$type_dir")" 2> /dev/null
               ln -s -- "$target_dir" "$type_dir"
             fi
 
@@ -242,13 +360,13 @@ show_status() {
 
   local _so_agents_md="" _so_rules="" _so_commands="" _so_skills="" _so_subagents=""
 
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
       local tool_dir="$base_dir/$tool_node"
 
-      if [[ -d "$tool_dir" ]]; then
+      if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
         local _stype_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
         local _stype_keys=("agents_md" "rules" "commands" "skills" "subagents")
 
@@ -257,7 +375,8 @@ show_status() {
           local output_key="${_stype_keys[$_si]}"
 
           if [[ "$type_node" != "." ]]; then
-            local type_dir="$tool_dir/$type_node"
+            local type_dir
+            type_dir=$(tool_type_path "$base_dir" "$tool_node" "$type_node")
             if [[ -L "$type_dir" ]]; then
               local target_dir
               target_dir=$(readlink "$type_dir" 2> /dev/null || true)
@@ -301,22 +420,20 @@ show_status() {
 
 # 列出支援的工具
 list_tools() {
-  local base_dir="$HOME"
+  local base_dir="${1:-$HOME}"
   log_context_info "$base_dir" || return
 
   echo -e "  ${BLUE}工具             Key          目錄                          AGENTS.md Rules Commands Skills Agents 狀態${NC}"
   echo -e "  ${BLUE}-----------------------------------------------------------------------------------------------------------${NC}"
 
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
 
     local row_color="${GRAY}"
     local status="未找到"
 
     for tool_node in "${node_array[@]}"; do
-      local tool_dir="$base_dir/$tool_node"
-
-      if [[ -d "$tool_dir" ]]; then
+      if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
         row_color="$color"
         status="已安裝"
         break
@@ -357,7 +474,7 @@ list_backups() {
 list_global_resources() {
   local dir_name="$1"
   local label="$2"
-  local base_dir="$HOME"
+  local base_dir="${3:-$HOME}"
   local target_dir="$base_dir/.ai-global/$dir_name"
 
   log_context_info "$target_dir" || return
@@ -395,19 +512,19 @@ list_global_resources() {
 }
 
 list_skills() {
-  list_global_resources "skills" "skills"
+  list_global_resources "skills" "skills" "$1"
 }
 
 list_rules() {
-  list_global_resources "rules" "rules"
+  list_global_resources "rules" "rules" "$1"
 }
 
 list_commands() {
-  list_global_resources "commands" "commands"
+  list_global_resources "commands" "commands" "$1"
 }
 
 list_agents() {
-  list_global_resources "agents" "agents"
+  list_global_resources "agents" "agents" "$1"
 }
 
 # 取消連結單一工具
@@ -425,7 +542,8 @@ unlink_one_tool() {
 
   for type_node in "$agents_md" "$rules" "$commands" "$skills" "$subagents"; do
     if [[ "$type_node" != "." ]]; then
-      local type_dir="$base_dir/$tool_node/$type_node"
+      local type_dir
+      type_dir=$(tool_type_path "$base_dir" "$tool_node" "$type_node")
       if [[ -L "$type_dir" ]]; then
         rm -- "$type_dir"
         log_ok "已取消連結: ${color}$(beautify_dir "$type_dir")${NC}"
@@ -479,12 +597,12 @@ clean_backups() {
 
     # 從備份檔名反推工具是否仍存在
     local is_orphaned=true
-    for pattern in "${KNOWN_PATTERNS[@]}"; do
+    for pattern in "${ACTIVE_PATTERNS[@]}"; do
       parse_pattern "$pattern"
       for tool_node in "${node_array[@]}"; do
         local prefix="${tool_node//\//_}"
         if [[ "$backup_name" == "${prefix}."* ]]; then
-          if [[ -d "$base_dir/$tool_node" ]]; then
+          if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
             is_orphaned=false
           fi
         fi
@@ -510,20 +628,20 @@ clean_backups() {
 
 # 重建所有 symlink
 relink_all() {
-  local base_dir="$HOME"
+  local base_dir="${1:-$HOME}"
   log_info "正在重建所有 symlink..."
   echo ""
 
   # 僅移除 symlink，不還原備份、不刪除備份
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
     for tool_node in "${node_array[@]}"; do
-      local tool_dir="$base_dir/$tool_node"
-      if [[ -d "$tool_dir" ]]; then
+      if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
         local _type_nodes=("$agents_md" "$rules" "$commands" "$skills" "$subagents")
         for type_node in "${_type_nodes[@]}"; do
           if [[ "$type_node" != "." ]]; then
-            local type_dir="$tool_dir/$type_node"
+            local type_dir
+            type_dir=$(tool_type_path "$base_dir" "$tool_node" "$type_node")
             if [[ -L "$type_dir" ]]; then
               rm -- "$type_dir"
             fi
@@ -533,7 +651,7 @@ relink_all() {
     done
   done
 
-  update_links
+  update_links "$base_dir"
 }
 
 # 取消連結所有工具
@@ -543,13 +661,11 @@ unlink_all_tools() {
 
   local total_unlinked=0
 
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
 
     for tool_node in "${node_array[@]}"; do
-      local tool_dir="$base_dir/$tool_node"
-
-      if [[ -d "$tool_dir" ]]; then
+      if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
         unlink_one_tool "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents" "$color"
         total_unlinked=$((total_unlinked + _UNLINK_COUNT))
       fi
@@ -566,6 +682,7 @@ unlink_all_tools() {
 # 取消連結指令
 unlink_tool() {
   local query_key="$1"
+  local base_dir="${2:-$HOME}"
 
   if [[ -z "$query_key" ]]; then
     log_error "用法: ai-global unlink <key> 或 ai-global unlink all"
@@ -573,17 +690,15 @@ unlink_tool() {
     return 1
   fi
 
-  local base_dir="$HOME"
-
   if [[ "$query_key" == "all" ]]; then
     unlink_all_tools "$base_dir"
     echo ""
     return 0
   fi
 
-  # 從 KNOWN_PATTERNS 中搜尋匹配的模式
+  # 從目前模式的 patterns 中搜尋匹配的模式
   local match=""
-  for pattern in "${KNOWN_PATTERNS[@]}"; do
+  for pattern in "${ACTIVE_PATTERNS[@]}"; do
     parse_pattern "$pattern"
     if [[ "$key" == "$query_key" ]]; then
       match="$pattern"
@@ -607,16 +722,18 @@ unlink_tool() {
   parse_pattern "$match"
 
   for tool_node in "${node_array[@]}"; do
-    local tool_dir="$base_dir/$tool_node"
-
-    if [[ -d "$tool_dir" ]]; then
+    if tool_node_exists "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents"; then
       has_found=true
       unlink_one_tool "$base_dir" "$tool_node" "$agents_md" "$rules" "$commands" "$skills" "$subagents" "$color"
       local unlinked_count=$_UNLINK_COUNT
       if [[ $unlinked_count -gt 0 ]]; then
-        log_ok "已從 ${color}$(beautify_dir "$tool_dir")${NC} 取消連結 $unlinked_count 個 symlink"
+        local display_dir="$base_dir/$tool_node"
+        [[ "$tool_node" == "." ]] && display_dir="$base_dir"
+        log_ok "已從 ${color}$(beautify_dir "$display_dir")${NC} 取消連結 $unlinked_count 個 symlink"
       else
-        log_info "${color}$(beautify_dir "$tool_dir")${NC} 未找到 symlink"
+        local display_dir="$base_dir/$tool_node"
+        [[ "$tool_node" == "." ]] && display_dir="$base_dir"
+        log_info "${color}$(beautify_dir "$display_dir")${NC} 未找到 symlink"
       fi
       echo ""
     fi
@@ -859,7 +976,7 @@ download_from_github() {
         esac
 
         # === 紀錄安裝來源 ===
-        local source_file="$HOME/.ai-global/source.md"
+        local source_file="$(dirname "$target_dir")/source.md"
         local github_url="https://github.com/$owner/$repo"
         case "$_install_mode" in
           meta_root)
@@ -918,6 +1035,7 @@ not_github_ref() {
 # 新增 skill 至全域 skills 目錄
 add_skill() {
   local input="$1"
+  local base_dir="${2:-$HOME}"
 
   if [[ -z "$input" ]]; then
     log_error "用法: ai-global add-skill <user/repo>"
@@ -938,7 +1056,6 @@ add_skill() {
     return 1
   fi
 
-  local base_dir="$HOME"
   local skills_dir="$base_dir/.ai-global/skills"
   mkdir -p "$skills_dir"
   log_context_info "$skills_dir" || return
@@ -949,6 +1066,7 @@ add_skill() {
 # 新增 rule 至全域 rules 目錄
 add_rule() {
   local input="$1"
+  local base_dir="${2:-$HOME}"
 
   if [[ -z "$input" ]]; then
     log_error "用法: ai-global add-rule <user/repo>"
@@ -968,7 +1086,6 @@ add_rule() {
     return 1
   fi
 
-  local base_dir="$HOME"
   local rules_dir="$base_dir/.ai-global/rules"
   mkdir -p "$rules_dir"
   log_context_info "$rules_dir" || return
@@ -979,6 +1096,7 @@ add_rule() {
 # 新增 command 至全域 commands 目錄
 add_command() {
   local input="$1"
+  local base_dir="${2:-$HOME}"
 
   if [[ -z "$input" ]]; then
     log_error "用法: ai-global add-command <user/repo>"
@@ -998,7 +1116,6 @@ add_command() {
     return 1
   fi
 
-  local base_dir="$HOME"
   local commands_dir="$base_dir/.ai-global/commands"
   mkdir -p "$commands_dir"
   log_context_info "$commands_dir" || return
@@ -1118,28 +1235,45 @@ show_version() {
 
 # 主程式
 main() {
-  local cmd="$1"
+  local args=()
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      -p | --project)
+        PROJECT_MODE=true
+        ;;
+      *)
+        args+=("$arg")
+        ;;
+    esac
+  done
+
+  local cmd="${args[0]}"
+  local arg1="${args[1]}"
 
   # 處理空指令
   if [[ -z "$cmd" ]]; then
     cmd="update"
   fi
 
+  prepare_run_base_dir "$cmd" || exit 1
+
   case "$cmd" in
     update) update_links ;;
     status | -s | --status) show_status ;;
-    list | -l | --list) list_tools ;;
+    list | -l | --list) list_tools "$RUN_BASE_DIR" ;;
     backups | -b | --backups) list_backups ;;
-    list-skills | -ls | --list-skills) list_skills ;;
-    list-rules | -lr | --list-rules) list_rules ;;
-    list-commands | -lc | --list-commands) list_commands ;;
-    list-agents | -la | --list-agents) list_agents ;;
-    relink | -r | --relink) relink_all ;;
-    unlink | --unlink) unlink_tool "$2" ;;
+    list-skills | -ls | --list-skills) list_skills "$RUN_BASE_DIR" ;;
+    list-rules | -lr | --list-rules) list_rules "$RUN_BASE_DIR" ;;
+    list-commands | -lc | --list-commands) list_commands "$RUN_BASE_DIR" ;;
+    list-agents | -la | --list-agents) list_agents "$RUN_BASE_DIR" ;;
+    relink | -r | --relink) relink_all "$RUN_BASE_DIR" ;;
+    unlink | --unlink) unlink_tool "$arg1" "$RUN_BASE_DIR" ;;
     clean | -c | --clean) clean_backups ;;
-    add-skill) add_skill "$2" ;;
-    add-rule) add_rule "$2" ;;
-    add-command) add_command "$2" ;;
+    add-skill) add_skill "$arg1" "$RUN_BASE_DIR" ;;
+    add-rule) add_rule "$arg1" "$RUN_BASE_DIR" ;;
+    add-command) add_command "$arg1" "$RUN_BASE_DIR" ;;
 
     upgrade | -u | --upgrade) upgrade ;;
     uninstall | --uninstall) uninstall ;;

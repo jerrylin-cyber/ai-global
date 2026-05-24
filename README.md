@@ -8,12 +8,12 @@
 
 ### 與原版的差異
 
-這個 Fork 拿掉了專案模式，只留系統模式，並新增多項功能。
+這個 Fork 預設只使用系統模式，並新增多項功能。
 
 原版根據你在哪個目錄執行來切換模式：在 `~` 就是系統模式，其他目錄就是專案模式，會在專案目錄下建立獨立的 `.ai-global/` 設定。這個版本調整：
 
-- 不再區分模式，所有指令為全域目錄模式
-- 拿掉專案模式
+- 不再依執行目錄自動切換模式，所有指令預設為全域目錄模式
+- 保留明確 opt-in 的專案模式：`-p` / `--project`
 - 新增 `relink` 指令：重建所有符號連結
 - 新增 `clean` 指令：清理孤立備份
 - 新增 `agents/` 子目錄支援
@@ -22,7 +22,7 @@
 - 下載資源時加入確認對話與來源追蹤（`source.md`）
 - 介面語言為繁體中文
 
-需要按專案分開管理 AI 設定的話，請用[原版](https://github.com/nanxiaobei/ai-global)。
+需要按專案分開管理 AI 設定時，可在支援的指令加上 `-p` / `--project`。
 
 **AI 程式設計助手統一設定管理器。**
 
@@ -112,6 +112,34 @@ ai-global
 | `ai-global uninstall`                    | 完整解除安裝                     |
 | `ai-global version`                      | 顯示版本號                       |
 | `ai-global help`                         | 顯示說明                         |
+
+### 專案模式
+
+`-p` / `--project` 只支援 `list`、`list-*`、`relink`、`unlink`、`add-*` 指令。使用時會先確認目前目錄不是家目錄，並詢問是否把目前目錄視為專案目錄。
+
+```bash
+ai-global -p list
+ai-global --project list-skills
+ai-global -p relink
+ai-global -p unlink codex
+ai-global -p add-skill <user/repo>
+```
+
+專案模式會使用目前目錄下的 `.ai-global/`，不影響 `~/.ai-global/`。
+
+專案模式有獨立的工具目錄對應，避免直接套用全域設定目錄。主要差異：
+
+| 工具 | 專案模式位置 |
+| ---- | ------------ |
+| Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
+| Clawdbot Code | `.clawdbot/AGENTS.md`、`.clawdbot/skills/`、`.clawdbot/subagents/` |
+| Codex CLI | `.codex/AGENTS.md`、`.codex/skills/`、`.codex/agents/` |
+| Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
+| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
+| Antigravity | `.gemini/GEMINI.md`、`.gemini/antigravity/skills/` |
+| Gemini CLI | `.gemini/GEMINI.md`、`.gemini/commands/`、`.gemini/skills/` |
+| OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
+| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### 新增資源
 
