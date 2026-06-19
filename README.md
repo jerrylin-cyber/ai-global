@@ -123,8 +123,7 @@ ai-global -p add-skill <user/repo>
 | Codex CLI | `.codex/agents/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
 | Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
-| Antigravity | `.gemini/GEMINI.md`、`.gemini/antigravity/skills/` |
-| Gemini CLI | `.gemini/GEMINI.md`、`.gemini/commands/`、`.gemini/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
 | OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
 | Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
@@ -188,8 +187,7 @@ ai-global list-agents                 # 列出 agents
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
 | Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
-| Antigravity    | `antigravity` |     ✓     |       |          |   ✓    |        |
-| Gemini CLI     | `gemini`      |     ✓     |       |          |   ✓    |        |
+| Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
 | Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
