@@ -14,7 +14,7 @@ REPO_SLUG="lazyjerry/ai-global"
 declare -a KNOWN_PATTERNS=(
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
   ".clawdbot|clawdbot|Clawdbot Code|AGENTS.md|.|.|skills|subagents|\\033[38;5;208m"
-  ".codex|codex|Codex CLI|AGENTS.md|.|.|skills|agents|\\033[38;5;9m"
+  ".agents|codex|Codex CLI|AGENTS.md|.|.|skills|agents|\\033[38;5;9m"
   ".copilot|copilot|Copilot CLI|copilot-instructions.md|.|.|skills|agents|\\033[38;5;45m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|agy|Antigravity CLI|GEMINI.md|.|.|antigravity/skills|.|\\033[38;5;214m"
@@ -26,7 +26,6 @@ declare -a KNOWN_PATTERNS=(
 declare -a PROJECT_KNOWN_PATTERNS=(
   ".claude|claude|Claude Code|CLAUDE.md|.|commands|skills|agents|\\033[38;5;180m"
   ".agents|codex-skills|Codex Skills|.|.|.|skills|.|\\033[38;5;9m"
-  ".codex|codex|Codex CLI|.|.|.|.|agents|\\033[38;5;9m"
   ".github|copilot|Copilot CLI|copilot-instructions.md|instructions|prompts|skills|agents|\\033[38;5;45m"
   ".cursor|cursor|Cursor|AGENTS.md|rules|commands|skills|agents|\\033[38;5;12m"
   ".gemini|agy|Antigravity CLI|GEMINI.md|.agents/rules|.|antigravity/skills|.|\\033[38;5;214m"
