@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.7.2"
+VERSION="2.7.3"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -463,7 +463,7 @@ show_project_git_tracking_hint() {
   [[ ! -d "$base_dir/.git" ]] && return 0
 
   log_warn "偵測到專案目錄有 .git/，ai-global 建立的 symlink 或 .ai-global 可能被 Git 追蹤"
-  read -r -p "是否顯示「取消追蹤 / 添加至 .gitignore 」的建議指令？[y/N] " _reply
+  read -r -p "$(printf '是否%b顯示%b「取消追蹤 / 添加至 .gitignore 」的建議指令？[y/N] ' "$RED" "$NC")" _reply
   _reply="${_reply:-N}"
 
   if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
