@@ -8,12 +8,12 @@
 
 ### 与原版的差异
 
-这个 Fork 去掉了项目模式，只保留系统模式，并新增多项功能。
+这个 Fork 默认只使用系统模式，并新增多项功能。
 
-原版根据你在哪个目录执行来切换模式：在 `~` 就是系统模式，其他目录就是项目模式，会在项目目录下创建独立的 `.ai-global/` 配置。这个版本简化成：
+原版根据你在哪个目录执行来切换模式：在 `~` 就是系统模式，其他目录就是项目模式，会在项目目录下创建独立的 `.ai-global/` 配置。这个版本调整为：
 
-- 不再区分模式，所有命令为全局目录模式
-- 去掉项目模式
+- 不再根据执行目录自动切换模式，所有命令默认为全局目录模式
+- 保留明确 opt-in 的项目模式：`-p` / `--project`
 - 新增 `relink` 命令：重建所有软链
 - 新增 `clean` 命令：清理孤立备份
 - 新增 `agents/` 子目录支持
@@ -22,7 +22,7 @@
 - 下载资源时加入确认对话与来源追踪（`source.md`）
 - 界面语言为繁体中文
 
-需要按项目分开管理 AI 配置的话，请用[原版](https://github.com/nanxiaobei/ai-global)。
+需要按项目分开管理 AI 配置时，可在支持的命令加上 `-p` / `--project`。
 
 **AI 编程工具统一配置管理器。**
 
@@ -57,6 +57,14 @@ bun add -g ai-global
 ai-global
 ```
 
+不带参数会进入交互式菜单，可选择全局模式或项目模式的常用操作。
+
+若要直接执行原本的扫描、合并、更新 symlink，请使用：
+
+```bash
+ai-global update
+```
+
 这将会：
 
 1. 扫描已安装的 AI 工具
@@ -70,7 +78,8 @@ ai-global
 
 | 命令                                     | 说明                         |
 | ---------------------------------------- | ---------------------------- |
-| `ai-global`                              | 扫描、合并、更新软链（默认） |
+| `ai-global`                              | 打开交互式菜单               |
+| `ai-global update`                       | 扫描、合并、更新软链         |
 | `ai-global status`                       | 显示软链状态                 |
 | `ai-global list`                         | 列出支持的工具               |
 | `ai-global backups`                      | 列出可用的备份               |
@@ -89,6 +98,33 @@ ai-global
 | `ai-global uninstall`                    | 彻底卸载                     |
 | `ai-global version`                      | 显示版本号                   |
 | `ai-global help`                         | 显示帮助                     |
+
+### 项目模式
+
+`-p` / `--project` 只支持 `update`、`list`、`list-*`、`relink`、`unlink`、`add-*` 命令。使用时会先确认当前目录不是家目录，并询问是否把当前目录视为项目目录。
+
+```bash
+ai-global -p list
+ai-global -p update
+ai-global --project list-skills
+ai-global -p relink
+ai-global -p unlink codex
+ai-global -p add-skill <user/repo>
+```
+
+项目模式会使用当前目录下的 `.ai-global/`，不影响 `~/.ai-global/`。
+
+项目模式有独立的工具目录对应，避免直接套用全局配置目录。主要差异：
+
+| 工具 | 项目模式位置 |
+| ---- | ------------ |
+| Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
+| Codex Skills | `.agents/skills/` |
+| Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
+| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
+| OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
+| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### 添加资源
 
@@ -170,8 +206,6 @@ ai-global uninstall
 如果通过 npm 安装：
 
 ```bash
-ai-global uninstall
-
 npm uninstall -g ai-global
 ```
 

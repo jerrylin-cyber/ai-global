@@ -8,12 +8,12 @@
 
 ### 원본과의 차이점
 
-이 포크는 프로젝트 모드를 제거하고 시스템 모드만 유지하며, 여러 기능을 추가했습니다.
+이 포크는 기본적으로 시스템 모드만 사용하며, 여러 기능을 추가했습니다.
 
-원본은 실행 디렉토리에 따라 모드를 전환합니다. `~`에서는 시스템 모드, 그 외에는 프로젝트 모드로 동작하며, 프로젝트 디렉토리에 독립적인 `.ai-global/` 설정을 생성합니다. 이 버전은 다음과 같이 단순화했습니다:
+원본은 실행 디렉토리에 따라 모드를 전환합니다. `~`에서는 시스템 모드, 그 외에는 프로젝트 모드로 동작하며, 프로젝트 디렉토리에 독립적인 `.ai-global/` 설정을 생성합니다. 이 버전은 다음과 같이 변경했습니다:
 
-- 모드 구분 없이 모든 명령어가 글로벌 디렉토리 모드로 실행됩니다
-- 프로젝트 모드 제거
+- 실행 디렉토리에 따른 자동 모드 전환을 없애고, 모든 명령어가 기본적으로 글로벌 디렉토리 모드로 실행됩니다
+- 명시적으로 옵트인하는 프로젝트 모드를 유지: `-p` / `--project`
 - `relink` 명령어 추가: 모든 심볼릭 링크 재구성
 - `clean` 명령어 추가: 고아 백업 정리
 - `agents/` 하위 디렉토리 지원 추가
@@ -22,7 +22,7 @@
 - 리소스 다운로드 시 확인 대화 및 소스 추적(`source.md`) 추가
 - UI 언어는 번체 중국어
 
-프로젝트별로 AI 설정을 분리해야 하는 경우 [원본](https://github.com/nanxiaobei/ai-global)을 사용하세요.
+프로젝트별로 AI 설정을 분리해 관리해야 하는 경우, 지원되는 명령어에 `-p` / `--project`를 추가하세요.
 
 **AI 프로그래밍 어시스턴트 통합 설정 관리 도구입니다.**
 
@@ -57,6 +57,14 @@ bun add -g ai-global
 ai-global
 ```
 
+인자 없이 실행하면 대화형 메뉴가 열리며, 글로벌 모드 또는 프로젝트 모드의 일반적인 작업을 선택할 수 있습니다.
+
+원래의 스캔, 병합, 심볼릭 링크 업데이트를 바로 실행하려면 다음을 사용하세요:
+
+```bash
+ai-global update
+```
+
 실행 시:
 
 1. 설치된 AI 도구를 스캔합니다
@@ -70,7 +78,8 @@ ai-global
 
 | 명령어                                   | 설명                                    |
 | ---------------------------------------- | --------------------------------------- |
-| `ai-global`                              | 스캔, 병합, 심볼릭 링크 업데이트 (기본) |
+| `ai-global`                              | 대화형 메뉴 열기                        |
+| `ai-global update`                       | 스캔, 병합, 심볼릭 링크 업데이트        |
 | `ai-global status`                       | 심볼릭 링크 상태 표시                   |
 | `ai-global list`                         | 지원되는 도구 목록 표시                 |
 | `ai-global backups`                      | 사용 가능한 백업 목록 표시              |
@@ -89,6 +98,33 @@ ai-global
 | `ai-global uninstall`                    | 완전히 제거                             |
 | `ai-global version`                      | 버전 번호 표시                          |
 | `ai-global help`                         | 도움말 표시                             |
+
+### 프로젝트 모드
+
+`-p` / `--project`는 `update`, `list`, `list-*`, `relink`, `unlink`, `add-*` 명령어만 지원합니다. 사용 시 먼저 현재 디렉토리가 홈 디렉토리가 아닌지 확인하고, 현재 디렉토리를 프로젝트 디렉토리로 취급할지 묻습니다.
+
+```bash
+ai-global -p list
+ai-global -p update
+ai-global --project list-skills
+ai-global -p relink
+ai-global -p unlink codex
+ai-global -p add-skill <user/repo>
+```
+
+프로젝트 모드는 현재 디렉토리 아래의 `.ai-global/`을 사용하며, `~/.ai-global/`에는 영향을 주지 않습니다.
+
+프로젝트 모드는 글로벌 설정 디렉토리를 그대로 적용하지 않도록 별도의 도구 디렉토리 매핑을 가집니다. 주요 차이점:
+
+| 도구 | 프로젝트 모드 위치 |
+| ---- | ------------ |
+| Claude Code | `.claude/CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/agents/` |
+| Codex Skills | `.agents/skills/` |
+| Copilot CLI | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/prompts/` |
+| Cursor | `.cursor/AGENTS.md`, `.cursor/rules/`, `.cursor/commands/`, `.cursor/skills/`, `.cursor/agents/` |
+| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/`, `.gemini/antigravity/skills/` |
+| OpenCode | `.opencode/AGENTS.md`, `.opencode/commands/`, `.opencode/skills/`, `.opencode/agents/` |
+| Windsurf | `.windsurf/AGENTS.md`, `.windsurf/rules/`, `.windsurf/skills/` |
 
 ### 리소스 추가
 
@@ -170,8 +206,6 @@ ai-global uninstall
 npm으로 설치한 경우:
 
 ```bash
-ai-global uninstall
-
 npm uninstall -g ai-global
 ```
 

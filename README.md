@@ -120,7 +120,6 @@ ai-global -p add-skill <user/repo>
 | ---- | ------------ |
 | Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
-| Codex CLI | `.codex/agents/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
 | Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
 | Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |

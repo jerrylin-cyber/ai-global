@@ -8,12 +8,12 @@
 
 ### オリジナル版との違い
 
-このフォークはプロジェクトモードを削除し、システムモードのみを残し、複数の機能を追加しています。
+このフォークはデフォルトでシステムモードのみを使用し、複数の機能を追加しています。
 
-オリジナル版は実行ディレクトリに応じてモードを切り替えます。`~` ではシステムモード、それ以外ではプロジェクトモードとなり、プロジェクトディレクトリに独立した `.ai-global/` 設定を作成します。このバージョンでは以下のように簡素化しました：
+オリジナル版は実行ディレクトリに応じてモードを切り替えます。`~` ではシステムモード、それ以外ではプロジェクトモードとなり、プロジェクトディレクトリに独立した `.ai-global/` 設定を作成します。このバージョンでは以下のように変更しました：
 
-- モードの区別を廃止し、すべてのコマンドはグローバルディレクトリモードで実行されます
-- プロジェクトモードを削除
+- 実行ディレクトリによる自動モード切り替えを廃止し、すべてのコマンドはデフォルトでグローバルディレクトリモードになります
+- 明示的にオプトインするプロジェクトモードを維持：`-p` / `--project`
 - `relink` コマンドを追加：すべてのシンボリックリンクを再構築
 - `clean` コマンドを追加：孤立したバックアップをクリーンアップ
 - `agents/` サブディレクトリのサポートを追加
@@ -22,7 +22,7 @@
 - リソースダウンロード時に確認ダイアログとソース追跡（`source.md`）を追加
 - UI 言語は繁体字中国語
 
-プロジェクトごとに AI 設定を分けたい場合は、[オリジナル版](https://github.com/nanxiaobei/ai-global)をご利用ください。
+プロジェクトごとに AI 設定を分けて管理したい場合は、対応するコマンドに `-p` / `--project` を付けてください。
 
 **AI プログラミングアシスタント統合設定管理ツールです。**
 
@@ -57,6 +57,14 @@ bun add -g ai-global
 ai-global
 ```
 
+引数なしで実行すると対話式メニューが開き、グローバルモードまたはプロジェクトモードの一般的な操作を選択できます。
+
+元のスキャン、マージ、シンボリックリンク更新を直接実行するには、次を使用します：
+
+```bash
+ai-global update
+```
+
 これにより：
 
 1. インストールされている AI ツールをスキャン
@@ -70,7 +78,8 @@ ai-global
 
 | コマンド                                 | 説明                                                 |
 | ---------------------------------------- | ---------------------------------------------------- |
-| `ai-global`                              | スキャン、マージ、シンボリックリンク更新（デフォルト） |
+| `ai-global`                              | 対話式メニューを開く                                 |
+| `ai-global update`                       | スキャン、マージ、シンボリックリンク更新             |
 | `ai-global status`                       | シンボリックリンクの状態を表示                       |
 | `ai-global list`                         | サポートされているツールを一覧表示                   |
 | `ai-global backups`                      | 利用可能なバックアップを一覧表示                     |
@@ -89,6 +98,33 @@ ai-global
 | `ai-global uninstall`                    | 完全にアンインストール                               |
 | `ai-global version`                      | バージョン番号を表示                                 |
 | `ai-global help`                         | ヘルプを表示                                         |
+
+### プロジェクトモード
+
+`-p` / `--project` は `update`、`list`、`list-*`、`relink`、`unlink`、`add-*` コマンドのみをサポートします。使用時は、まず現在のディレクトリがホームディレクトリでないことを確認し、現在のディレクトリをプロジェクトディレクトリとして扱うかどうかを尋ねます。
+
+```bash
+ai-global -p list
+ai-global -p update
+ai-global --project list-skills
+ai-global -p relink
+ai-global -p unlink codex
+ai-global -p add-skill <user/repo>
+```
+
+プロジェクトモードは現在のディレクトリ下の `.ai-global/` を使用し、`~/.ai-global/` には影響しません。
+
+プロジェクトモードはグローバル設定ディレクトリをそのまま適用しないよう、独自のツールディレクトリ対応を持ちます。主な違い：
+
+| ツール | プロジェクトモードの場所 |
+| ---- | ------------ |
+| Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
+| Codex Skills | `.agents/skills/` |
+| Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
+| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
+| OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
+| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### リソースを追加
 
@@ -170,8 +206,6 @@ ai-global uninstall
 npm でインストールした場合：
 
 ```bash
-ai-global uninstall
-
 npm uninstall -g ai-global
 ```
 

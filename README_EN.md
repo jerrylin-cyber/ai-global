@@ -8,21 +8,21 @@
 
 ### Differences from upstream
 
-This fork removes project mode, keeps only system mode, and adds several features.
+This fork defaults to system mode only and adds several features.
 
-The original version switches between system/project mode based on which directory you run it from: `~` for system mode, anything else for project mode, creating an independent `.ai-global/` config under project directories. This version simplifies it to:
+The original version switches between system/project mode based on which directory you run it from: `~` for system mode, anything else for project mode, creating an independent `.ai-global/` config under project directories. This version changes that to:
 
-- No more mode distinction — all commands run in global directory mode
-- Removed project mode
+- No longer auto-switches mode by working directory — all commands default to global directory mode
+- Keeps an explicit opt-in project mode: `-p` / `--project`
 - Added `relink` command: rebuild all symlinks
 - Added `clean` command: clean up orphaned backups
 - Added `agents/` subdirectory support
-- Uninstall preserves `~/.ai-global/` directory (upstream deletes it)
+- Uninstall preserves the `~/.ai-global/` directory (upstream deletes it)
 - Uninstall asks for confirmation (Y/N) before proceeding
-- Resource downloads include confirmation dialog and source tracking (`source.md`)
+- Resource downloads include a confirmation dialog and source tracking (`source.md`)
 - UI language is Traditional Chinese
 
-If you need per-project AI configs, use the [upstream version](https://github.com/nanxiaobei/ai-global).
+When you need to manage AI configs per project, add `-p` / `--project` to the supported commands.
 
 **Unified Configuration Manager for AI Coding Tools.**
 
@@ -57,6 +57,14 @@ bun add -g ai-global
 ai-global
 ```
 
+Running without arguments opens an interactive menu where you can pick common operations for global mode or project mode.
+
+To directly run the original scan, merge, and symlink update, use:
+
+```bash
+ai-global update
+```
+
 This will:
 
 1. Scan for installed AI tools
@@ -66,11 +74,12 @@ This will:
 
 Note: AI Global only handles tool directories that already exist. It does not create directories like `.github`, `.kiro`, or `.cursor` for you.
 
-## Commands
+### Commands
 
 | Command                                  | Description                            |
 | ---------------------------------------- | -------------------------------------- |
-| `ai-global`                              | Scan, merge, update symlinks (default) |
+| `ai-global`                              | Open the interactive menu              |
+| `ai-global update`                       | Scan, merge, update symlinks           |
 | `ai-global status`                       | Show symlinks status                   |
 | `ai-global list`                         | List all supported AI tools            |
 | `ai-global backups`                      | List available backups                 |
@@ -89,6 +98,33 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global uninstall`                    | Completely remove ai-global            |
 | `ai-global version`                      | Show version                           |
 | `ai-global help`                         | Show help                              |
+
+### Project mode
+
+`-p` / `--project` only supports the `update`, `list`, `list-*`, `relink`, `unlink`, and `add-*` commands. When used, it first confirms the current directory is not your home directory, then asks whether to treat the current directory as a project directory.
+
+```bash
+ai-global -p list
+ai-global -p update
+ai-global --project list-skills
+ai-global -p relink
+ai-global -p unlink codex
+ai-global -p add-skill <user/repo>
+```
+
+Project mode uses the `.ai-global/` under the current directory and does not affect `~/.ai-global/`.
+
+Project mode has its own tool directory mapping to avoid applying the global config directories directly. Main differences:
+
+| Tool | Project mode location |
+| ---- | --------------------- |
+| Claude Code | `.claude/CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/agents/` |
+| Codex Skills | `.agents/skills/` |
+| Copilot CLI | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/prompts/` |
+| Cursor | `.cursor/AGENTS.md`, `.cursor/rules/`, `.cursor/commands/`, `.cursor/skills/`, `.cursor/agents/` |
+| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/`, `.gemini/antigravity/skills/` |
+| OpenCode | `.opencode/AGENTS.md`, `.opencode/commands/`, `.opencode/skills/`, `.opencode/agents/` |
+| Windsurf | `.windsurf/AGENTS.md`, `.windsurf/rules/`, `.windsurf/skills/` |
 
 ### Add resources
 
@@ -170,8 +206,6 @@ Note: The `~/.ai-global/` directory is preserved — your config files remain in
 If installed via npm:
 
 ```bash
-ai-global uninstall
-
 npm uninstall -g ai-global
 ```
 
