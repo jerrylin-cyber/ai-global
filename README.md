@@ -91,6 +91,7 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | 新增規則                         |
 | `ai-global add-command <user/repo>`      | 新增指令                         |
 | `ai-global update-skills`                | 依安裝紀錄重新安裝所有技能       |
+| `ai-global remove-skill <name>`          | 移除指定技能並清除安裝紀錄       |
 | `ai-global list-skills` `ai-global -ls`  | 列出全域 skills                  |
 | `ai-global list-rules` `ai-global -lr`   | 列出全域 rules                   |
 | `ai-global list-commands` `ai-global -lc`| 列出全域 commands                |
@@ -134,6 +135,7 @@ ai-global add-skill <user/repo>       # 新增技能
 ai-global add-rule <user/repo>        # 新增規則
 ai-global add-command <user/repo>     # 新增指令
 ai-global update-skills               # 依安裝紀錄重新安裝所有技能
+ai-global remove-skill <name>         # 移除指定技能
 ai-global list-skills                 # 列出 skills
 ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
@@ -141,6 +143,8 @@ ai-global list-agents                 # 列出 agents
 ```
 
 `add-*` 會將來源記錄在 `.ai-global/source.md`（格式 `GitHub URL|類型|安裝路徑`）。`update-skills` 依此紀錄重新 clone 並覆蓋既有 skill，只更新紀錄中已安裝的項目，不會安裝倉庫後來新增的 skill（那些請用 `add-skill`）。執行前會將原紀錄備份為 `source.md.bak`。本地自建、未經 `add-skill` 安裝的 skill 沒有紀錄，不受影響。
+
+`remove-skill` 刪除 `.ai-global/skills/<name>` 並同步移除該筆紀錄。由於各工具的 skills 目錄是整個目錄的 symlink，刪除後所有工具同步生效，不需逐一清理。刪除前會顯示安裝來源供確認；若該 skill 沒有來源紀錄（本地自建），會額外警告刪除後無法自動還原。**刪除不可復原，skills 不在備份機制涵蓋範圍內。**
 
 支援 `user/repo` 或 `https://github.com/user/repo` 格式，資源將被下載至 `.ai-global/` 對應子目錄。
 

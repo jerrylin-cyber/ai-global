@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.8.0"
+VERSION="2.9.0"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -58,6 +58,7 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "12|global|add-rule|repo|新增 rule"
   "13|global|add-command|repo|新增 command"
   "14|global|update-skills||更新已安裝的 skill"
+  "15|global|remove-skill|name|移除 skill"
   "21|project|update||更新 symlink"
   "22|project|list||列出支援工具"
   "23|project|relink||重建 symlink"
@@ -70,6 +71,7 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "30|project|add-rule|repo|新增 rule"
   "31|project|add-command|repo|新增 command"
   "32|project|update-skills||更新已安裝的 skill"
+  "33|project|remove-skill|name|移除 skill"
 )
 
 # 顏色
@@ -124,6 +126,7 @@ format_menu_command() {
   case "$arg_type" in
     key) echo "$prefix $cmd <key|all>" ;;
     repo) echo "$prefix $cmd <user/repo>" ;;
+    name) echo "$prefix $cmd <name>" ;;
     *) echo "$prefix $cmd" ;;
   esac
 }
@@ -175,6 +178,7 @@ show_help() {
   echo -e "  ${GREEN}add-rule <user/repo>${NC}     從 GitHub 安裝 rule 至 .ai-global/rules/"
   echo -e "  ${GREEN}add-command <user/repo>${NC}  從 GitHub 安裝 command 至 .ai-global/commands/"
   echo -e "  ${GREEN}update-skills${NC}            依 source.md 紀錄重新安裝所有 skill"
+  echo -e "  ${GREEN}remove-skill <name>${NC}      移除指定 skill 並清除其安裝紀錄"
   echo -e "  ${GREEN}list-skills, -ls${NC}         列出 skills"
   echo -e "  ${GREEN}list-rules, -lr${NC}          列出 rules"
   echo -e "  ${GREEN}list-commands, -lc${NC}       列出 commands"
@@ -549,7 +553,7 @@ supports_project_mode() {
     relink | -r | --relink | \
     unlink | --unlink | \
     add-skill | add-rule | add-command | \
-    update-skills)
+    update-skills | remove-skill)
       return 0
       ;;
     *)
@@ -1245,20 +1249,28 @@ expand_source_path() {
   echo "${path/#\~/$HOME}"
 }
 
+# 移除指定 類型+路徑 的安裝紀錄
+drop_source_record() {
+  local source_file="$1"
+  local label="$2"
+  local path="$3"
+  local suffix="|${label}|${path}"
+
+  [[ ! -f "$source_file" ]] && return 0
+
+  local tmp="${source_file}.tmp.$$"
+  awk -v s="$suffix" 'substr($0, length($0) - length(s) + 1) != s' "$source_file" > "$tmp" \
+    && mv -- "$tmp" "$source_file"
+}
+
 # 寫入安裝紀錄（upsert：同 類型+路徑 的舊行先移除再追加）
 record_source() {
   local source_file="$1"
   local url="$2"
   local label="$3"
   local path="$4"
-  local suffix="|${label}|${path}"
 
-  if [[ -f "$source_file" ]]; then
-    local tmp="${source_file}.tmp.$$"
-    awk -v s="$suffix" 'substr($0, length($0) - length(s) + 1) != s' "$source_file" > "$tmp" \
-      && mv -- "$tmp" "$source_file"
-  fi
-
+  drop_source_record "$source_file" "$label" "$path"
   echo "${url}|${label}|${path}" >> "$source_file"
 }
 
@@ -1753,6 +1765,70 @@ update_skills() {
   log_ok "更新完成"
 }
 
+# 移除指定 skill（同時清除 source.md 紀錄）
+remove_skill() {
+  local name="$1"
+  local base_dir="${2:-$HOME}"
+
+  if [[ -z "$name" ]]; then
+    log_error "用法: ai-global remove-skill <skill-name>"
+    echo ""
+    echo "範例:"
+    echo "  ai-global remove-skill my-skill"
+    echo ""
+    log_info "可用 list-skills 查看已安裝的 skill"
+    return 1
+  fi
+
+  # 僅接受單層名稱，避免路徑穿越
+  if [[ "$name" == */* ]] || [[ "$name" == "." ]] || [[ "$name" == ".." ]]; then
+    log_error "無效的 skill 名稱: $name"
+    return 1
+  fi
+
+  local skills_dir="$base_dir/.ai-global/skills"
+  local target="$skills_dir/$name"
+
+  log_context_info "$skills_dir" || return
+
+  if [[ ! -d "$target" ]]; then
+    log_error "找不到 skill: $name"
+    echo ""
+    log_info "可用 list-skills 查看已安裝的 skill"
+    return 1
+  fi
+
+  local source_file
+  source_file=$(source_file_path "$base_dir")
+  local recorded_path
+  recorded_path=$(beautify_dir "$target")
+  local origin=""
+  if [[ -f "$source_file" ]]; then
+    origin=$(awk -F'|' -v p="$recorded_path" '$2 == "skill" && $3 == p { print $1 }' "$source_file" | tail -1)
+  fi
+
+  log_warn "即將刪除: $recorded_path"
+  if [[ -n "$origin" ]]; then
+    log_info "安裝來源: ${origin} (可日後用 add-skill 重新安裝)"
+  else
+    log_warn "此 skill 沒有安裝來源紀錄，刪除後無法自動還原"
+  fi
+  echo ""
+  read -r -p "確定刪除?[y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+    log_info "已取消"
+    return 0
+  fi
+
+  rm -rf -- "$target"
+  drop_source_record "$source_file" "skill" "$recorded_path"
+
+  echo ""
+  log_ok "已移除 skill: $name"
+}
+
 # 升級
 upgrade() {
   log_info "正在檢查更新..."
@@ -1923,6 +1999,10 @@ show_interactive_menu() {
         argument=$(prompt_interactive_arg "GitHub repo (user/repo): ")
         [[ -z "$argument" ]] && { log_error "未輸入 GitHub repo"; return 1; }
         ;;
+      name)
+        argument=$(prompt_interactive_arg "skill 名稱: ")
+        [[ -z "$argument" ]] && { log_error "未輸入 skill 名稱"; return 1; }
+        ;;
       *)
         argument=""
         ;;
@@ -1982,6 +2062,7 @@ main() {
     clean | -c | --clean) clean_backups ;;
     add-skill) add_skill "$arg1" "$RUN_BASE_DIR" ;;
     update-skills) update_skills "$RUN_BASE_DIR" ;;
+    remove-skill) remove_skill "$arg1" "$RUN_BASE_DIR" ;;
     add-rule) add_rule "$arg1" "$RUN_BASE_DIR" ;;
     add-command) add_command "$arg1" "$RUN_BASE_DIR" ;;
 
