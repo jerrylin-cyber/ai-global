@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.7.3"
+VERSION="2.8.0"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -57,6 +57,7 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "11|global|add-skill|repo|新增 skill"
   "12|global|add-rule|repo|新增 rule"
   "13|global|add-command|repo|新增 command"
+  "14|global|update-skills||更新已安裝的 skill"
   "21|project|update||更新 symlink"
   "22|project|list||列出支援工具"
   "23|project|relink||重建 symlink"
@@ -68,6 +69,7 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "29|project|add-skill|repo|新增 skill"
   "30|project|add-rule|repo|新增 rule"
   "31|project|add-command|repo|新增 command"
+  "32|project|update-skills||更新已安裝的 skill"
 )
 
 # 顏色
@@ -89,6 +91,10 @@ FORCE_GLOBAL_MODE=false
 RUN_BASE_DIR="$HOME"
 declare -a ACTIVE_PATTERNS=("${KNOWN_PATTERNS[@]}")
 declare -a ACTIVE_UNLINK_RELINK_PATTERNS=("${UNLINK_RELINK_PATTERNS[@]}")
+
+# 更新模式：跳過互動確認，且僅重裝 UPDATE_ONLY_NAMES 列出的資源
+UPDATE_MODE=false
+declare -a UPDATE_ONLY_NAMES=()
 
 # 美化目錄路徑顯示
 beautify_dir() {
@@ -168,6 +174,7 @@ show_help() {
   echo -e "  ${GREEN}add-skill <user/repo>${NC}    從 GitHub 安裝 skill 至 .ai-global/skills/"
   echo -e "  ${GREEN}add-rule <user/repo>${NC}     從 GitHub 安裝 rule 至 .ai-global/rules/"
   echo -e "  ${GREEN}add-command <user/repo>${NC}  從 GitHub 安裝 command 至 .ai-global/commands/"
+  echo -e "  ${GREEN}update-skills${NC}            依 source.md 紀錄重新安裝所有 skill"
   echo -e "  ${GREEN}list-skills, -ls${NC}         列出 skills"
   echo -e "  ${GREEN}list-rules, -lr${NC}          列出 rules"
   echo -e "  ${GREEN}list-commands, -lc${NC}       列出 commands"
@@ -541,7 +548,8 @@ supports_project_mode() {
     list-agents | -la | --list-agents | \
     relink | -r | --relink | \
     unlink | --unlink | \
-    add-skill | add-rule | add-command)
+    add-skill | add-rule | add-command | \
+    update-skills)
       return 0
       ;;
     *)
@@ -1226,6 +1234,73 @@ extract_meta_name() {
   fi
 }
 
+# 安裝來源紀錄檔路徑
+source_file_path() {
+  echo "${1:-$HOME}/.ai-global/source.md"
+}
+
+# 將紀錄中的 ~ 還原為絕對路徑
+expand_source_path() {
+  local path="$1"
+  echo "${path/#\~/$HOME}"
+}
+
+# 寫入安裝紀錄（upsert：同 類型+路徑 的舊行先移除再追加）
+record_source() {
+  local source_file="$1"
+  local url="$2"
+  local label="$3"
+  local path="$4"
+  local suffix="|${label}|${path}"
+
+  if [[ -f "$source_file" ]]; then
+    local tmp="${source_file}.tmp.$$"
+    awk -v s="$suffix" 'substr($0, length($0) - length(s) + 1) != s' "$source_file" > "$tmp" \
+      && mv -- "$tmp" "$source_file"
+  fi
+
+  echo "${url}|${label}|${path}" >> "$source_file"
+}
+
+# 整理安裝紀錄：去除重複行（保留最新來源），並移除 scope_dir 底下已不存在的孤兒紀錄
+# scope_dir 之外的紀錄一律原樣保留，避免誤刪其他資源類型的紀錄
+# 輸出被移除的孤兒紀錄筆數
+prune_source_records() {
+  local source_file="$1"
+  local scope_dir="$2"
+  [[ ! -f "$source_file" ]] && echo 0 && return 0
+
+  cp -- "$source_file" "${source_file}.bak"
+
+  local deduped="${source_file}.dedup.$$"
+  awk -F'|' 'NF >= 3 {
+    key = $2 "|" $3
+    if (!(key in seen)) order[++n] = key
+    seen[key] = $0
+  }
+  END { for (i = 1; i <= n; i++) print seen[order[i]] }' "$source_file" > "$deduped"
+
+  local kept="${source_file}.kept.$$"
+  : > "$kept"
+  local orphans=0
+  local line path abs_path
+  while IFS= read -r line; do
+    path=$(echo "$line" | cut -d'|' -f3-)
+    abs_path=$(expand_source_path "$path")
+
+    # 不屬於本次處理範圍的紀錄，不做存在性判斷
+    if [[ "$abs_path" != "$scope_dir"/* ]] || [[ -e "$abs_path" ]]; then
+      echo "$line" >> "$kept"
+    else
+      ((orphans++))
+    fi
+  done < "$deduped"
+
+  rm -f -- "$deduped"
+  mv -- "$kept" "$source_file"
+  echo "$orphans"
+}
+
 # 從 GitHub 下載資源（泛用）
 # $1: GitHub 參照
 # $2: 目標目錄
@@ -1329,6 +1404,23 @@ download_from_github() {
         done < <(find "$source_node" -name "$meta_file" -not -path '*/.git/*' -print0)
       fi
 
+      # === 更新模式：僅保留先前已安裝的資源 ===
+      if [[ "$UPDATE_MODE" == true ]] && [[ ${#_install_sources[@]} -gt 0 ]]; then
+        local -a _keep_sources=()
+        local -a _keep_names=()
+        for _i in "${!_install_sources[@]}"; do
+          for _wanted in "${UPDATE_ONLY_NAMES[@]}"; do
+            if [[ "${_install_names[$_i]}" == "$_wanted" ]]; then
+              _keep_sources+=("${_install_sources[$_i]}")
+              _keep_names+=("${_install_names[$_i]}")
+              break
+            fi
+          done
+        done
+        _install_sources=("${_keep_sources[@]}")
+        _install_names=("${_keep_names[@]}")
+      fi
+
       # === 確認階段 ===
       if [[ ${#_install_sources[@]} -gt 0 ]]; then
         log_info "找到以下 $resource_label:"
@@ -1337,14 +1429,17 @@ download_from_github() {
         done
         echo ""
         log_info "安裝目標: $(beautify_dir "$target_dir")"
-        log_warn "請確認您已對此倉庫進行安全掃描"
-        read -r -p "是否安裝?[Y/n] " _reply
-        _reply="${_reply:-Y}"
 
-        if [[ ! "$_reply" =~ ^[Yy] ]]; then
-          log_info "已取消安裝"
-          rm -rf -- "$tmp_dir"
-          return 0
+        if [[ "$UPDATE_MODE" != true ]]; then
+          log_warn "請確認您已對此倉庫進行安全掃描"
+          read -r -p "是否安裝?[Y/n] " _reply
+          _reply="${_reply:-Y}"
+
+          if [[ ! "$_reply" =~ ^[Yy] ]]; then
+            log_info "已取消安裝"
+            rm -rf -- "$tmp_dir"
+            return 0
+          fi
         fi
 
         # === 安裝階段 ===
@@ -1357,15 +1452,19 @@ download_from_github() {
             local should_install=true
 
             if [[ -d "$file_dir" ]]; then
-              log_warn "目標資料夾已存在: $(beautify_dir "$file_dir")"
-              read -r -p "是否覆蓋 ${_install_names[0]}?[y/N] " _overwrite
-              _overwrite="${_overwrite:-N}"
-
-              if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+              if [[ "$UPDATE_MODE" == true ]]; then
                 rm -rf -- "$file_dir"
               else
-                log_info "已跳過 ${_install_names[0]}"
-                should_install=false
+                log_warn "目標資料夾已存在: $(beautify_dir "$file_dir")"
+                read -r -p "是否覆蓋 ${_install_names[0]}?[y/N] " _overwrite
+                _overwrite="${_overwrite:-N}"
+
+                if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+                  rm -rf -- "$file_dir"
+                else
+                  log_info "已跳過 ${_install_names[0]}"
+                  should_install=false
+                fi
               fi
             fi
 
@@ -1382,15 +1481,19 @@ download_from_github() {
               local install_dir="$target_dir/${_install_names[$_i]}"
 
               if [[ -d "$install_dir" ]]; then
-                log_warn "目標資料夾已存在: $(beautify_dir "$install_dir")"
-                read -r -p "是否覆蓋 ${_install_names[$_i]}?[y/N] " _overwrite
-                _overwrite="${_overwrite:-N}"
-
-                if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+                if [[ "$UPDATE_MODE" == true ]]; then
                   rm -rf -- "$install_dir"
                 else
-                  log_info "已跳過 ${_install_names[$_i]}"
-                  continue
+                  log_warn "目標資料夾已存在: $(beautify_dir "$install_dir")"
+                  read -r -p "是否覆蓋 ${_install_names[$_i]}?[y/N] " _overwrite
+                  _overwrite="${_overwrite:-N}"
+
+                  if [[ "$_overwrite" =~ ^[Yy]$ ]]; then
+                    rm -rf -- "$install_dir"
+                  else
+                    log_info "已跳過 ${_install_names[$_i]}"
+                    continue
+                  fi
                 fi
               fi
 
@@ -1405,7 +1508,7 @@ download_from_github() {
             for _i in "${!_install_sources[@]}"; do
               local target_file="$target_dir/${_install_names[$_i]}"
 
-              if [[ -f "$target_file" ]]; then
+              if [[ -f "$target_file" ]] && [[ "$UPDATE_MODE" != true ]]; then
                 log_warn "目標檔案已存在: $(beautify_dir "$target_file")"
                 read -r -p "是否覆蓋 ${_install_names[$_i]}?[y/N] " _overwrite
                 _overwrite="${_overwrite:-N}"
@@ -1427,23 +1530,9 @@ download_from_github() {
         # === 紀錄安裝來源 ===
         local source_file="$(dirname "$target_dir")/source.md"
         local github_url="https://github.com/$owner/$repo"
-        case "$_install_mode" in
-          meta_root)
-            if [[ ${#_installed_names[@]} -gt 0 ]]; then
-              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_installed_names[0]}")" >> "$source_file"
-            fi
-            ;;
-          meta_sub)
-            for _name in "${_installed_names[@]}"; do
-              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_name}")" >> "$source_file"
-            done
-            ;;
-          files)
-            for _name in "${_installed_names[@]}"; do
-              echo "${github_url}|${resource_label}|$(beautify_dir "$target_dir/${_name}")" >> "$source_file"
-            done
-            ;;
-        esac
+        for _name in "${_installed_names[@]}"; do
+          record_source "$source_file" "$github_url" "$resource_label" "$(beautify_dir "$target_dir/${_name}")"
+        done
 
         echo ""
         if [[ "$resource_count" -gt 0 ]]; then
@@ -1591,6 +1680,77 @@ add_command() {
     [[ "$PROJECT_MODE" == true ]] && _relink_hint="ai-global -p"
     log_warn "尚未建立 commands symlink，請先執行: ${_relink_hint} relink"
   fi
+}
+
+# 依 source.md 紀錄重新安裝所有來自 GitHub 的 skill
+update_skills() {
+  local base_dir="${1:-$HOME}"
+  local skills_dir="$base_dir/.ai-global/skills"
+  local source_file
+  source_file=$(source_file_path "$base_dir")
+
+  log_context_info "$skills_dir" || return
+
+  if [[ ! -f "$source_file" ]]; then
+    log_warn "找不到安裝紀錄: $(beautify_dir "$source_file")"
+    log_info "只有透過 add-skill 安裝的 skill 才有紀錄可供更新"
+    return 1
+  fi
+
+  local orphans
+  orphans=$(prune_source_records "$source_file" "$skills_dir")
+  [[ "$orphans" -gt 0 ]] && log_info "已清除 $orphans 筆孤兒紀錄（目標已不存在），原紀錄備份於 source.md.bak"
+
+  # 逐一取出 skill 類型的來源倉庫（保持首次出現順序）
+  local -a _repos=()
+  local url path
+  while IFS='|' read -r url label path; do
+    [[ "$label" != "skill" ]] && continue
+    [[ "$(expand_source_path "$path")" != "$skills_dir"/* ]] && continue
+    local seen=false
+    for _r in "${_repos[@]}"; do
+      [[ "$_r" == "$url" ]] && seen=true && break
+    done
+    [[ "$seen" == false ]] && _repos+=("$url")
+  done < "$source_file"
+
+  if [[ ${#_repos[@]} -eq 0 ]]; then
+    log_warn "紀錄中沒有可更新的 skill"
+    return 0
+  fi
+
+  log_info "將從 ${#_repos[@]} 個來源重新安裝已紀錄的 skill:"
+  for _r in "${_repos[@]}"; do
+    echo "  - $_r"
+  done
+  echo ""
+  log_warn "既有的 skill 資料夾會被覆蓋，本地修改將遺失"
+  read -r -p "是否更新?[y/N] " _reply
+  _reply="${_reply:-N}"
+
+  if [[ ! "$_reply" =~ ^[Yy]$ ]]; then
+    log_info "已取消更新"
+    return 0
+  fi
+
+  for _r in "${_repos[@]}"; do
+    # 取出此倉庫先前安裝的 skill 名稱，更新時只重裝這些項目
+    UPDATE_ONLY_NAMES=()
+    while IFS='|' read -r url label path; do
+      [[ "$label" != "skill" ]] && continue
+      [[ "$url" != "$_r" ]] && continue
+      UPDATE_ONLY_NAMES+=("$(basename "$path")")
+    done < "$source_file"
+
+    echo ""
+    UPDATE_MODE=true
+    download_from_github "$_r" "$skills_dir" "SKILL.md" "skill" "skills skill"
+    UPDATE_MODE=false
+    UPDATE_ONLY_NAMES=()
+  done
+
+  echo ""
+  log_ok "更新完成"
 }
 
 # 升級
@@ -1821,6 +1981,7 @@ main() {
     unlink | --unlink) unlink_tool "$arg1" "$RUN_BASE_DIR" ;;
     clean | -c | --clean) clean_backups ;;
     add-skill) add_skill "$arg1" "$RUN_BASE_DIR" ;;
+    update-skills) update_skills "$RUN_BASE_DIR" ;;
     add-rule) add_rule "$arg1" "$RUN_BASE_DIR" ;;
     add-command) add_command "$arg1" "$RUN_BASE_DIR" ;;
 

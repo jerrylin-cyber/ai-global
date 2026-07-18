@@ -90,6 +90,7 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | 新增技能                         |
 | `ai-global add-rule <user/repo>`         | 新增規則                         |
 | `ai-global add-command <user/repo>`      | 新增指令                         |
+| `ai-global update-skills`                | 依安裝紀錄重新安裝所有技能       |
 | `ai-global list-skills` `ai-global -ls`  | 列出全域 skills                  |
 | `ai-global list-rules` `ai-global -lr`   | 列出全域 rules                   |
 | `ai-global list-commands` `ai-global -lc`| 列出全域 commands                |
@@ -132,11 +133,14 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # 新增技能
 ai-global add-rule <user/repo>        # 新增規則
 ai-global add-command <user/repo>     # 新增指令
+ai-global update-skills               # 依安裝紀錄重新安裝所有技能
 ai-global list-skills                 # 列出 skills
 ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
 ai-global list-agents                 # 列出 agents
 ```
+
+`add-*` 會將來源記錄在 `.ai-global/source.md`（格式 `GitHub URL|類型|安裝路徑`）。`update-skills` 依此紀錄重新 clone 並覆蓋既有 skill，只更新紀錄中已安裝的項目，不會安裝倉庫後來新增的 skill（那些請用 `add-skill`）。執行前會將原紀錄備份為 `source.md.bak`。本地自建、未經 `add-skill` 安裝的 skill 沒有紀錄，不受影響。
 
 支援 `user/repo` 或 `https://github.com/user/repo` 格式，資源將被下載至 `.ai-global/` 對應子目錄。
 
