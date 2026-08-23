@@ -91,7 +91,6 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | ルールを追加                                         |
 | `ai-global add-command <user/repo>`      | コマンドを追加                                       |
 | `ai-global render-skills` `ai-global -rs`| v-skills から skills 投影層を再構築 |
-| `ai-global set-category <name> <分類>`   | スキルの分類を移動（`-` は分類なし） |
 | `ai-global disable <name>`               | スキルを無効化（各ツールへ投影しない） |
 | `ai-global enable <name>`                | 無効化を解除                     |
 | `ai-global list-skills` `ai-global -ls`  | グローバル skills を一覧表示                         |
@@ -135,7 +134,6 @@ ai-global add-skill <user/repo>       # スキルを追加
 ai-global add-rule <user/repo>        # ルールを追加
 ai-global add-command <user/repo>     # コマンドを追加
 ai-global render-skills               # skills 投影層を再構築
-ai-global set-category <name> <分類>  # スキルの分類を移動
 ai-global disable <name>              # スキルを無効化
 ai-global enable <name>               # 無効化を解除
 ai-global list-skills                 # skills を一覧表示
@@ -185,7 +183,7 @@ ai-global list-agents                 # agents を一覧表示
 
 各 AI ツールは skills ディレクトリの**第一階層しか**スキャンせず、分類サブフォルダに対応しているものはありません。そのため AI Global はスキル実体を `v-skills/` に多層分類で置き、フラットな symlink として各ツールに投影します。
 
-- **インストール先は取得元から決まります**：`v-skills/<作者>/<repo>/<取得元の分類>/<スキル名>/`、手動で置いたものは `manual/` へ
+- **インストール先は取得元から決まります**：`v-skills/<作者>/<repo>/<取得元の分類>/<スキル名>/`、手動で置いたものは `manual/` へ。**分類を変更するコマンドはありません**——パスを取得元だけから決めることで予測可能・再現可能になり、`update-skills` も正しい場所を指し続けます。並べ替えたい場合は `v-skills/` 配下のディレクトリを自分で移動し、`render-skills` を実行してください
 - **スキルの編集は `v-skills/` 側で**。`skills/` 配下はすべて symlink です
 - **同名スキルは別々の分類に共存できますが、有効にできるのは 1 つだけ**。残りは `disable` で無効化してください
 - `v-skills/<任意の分類>/` に手動で置いたスキルは `render-skills` で投影されます。インストール記録は不要です

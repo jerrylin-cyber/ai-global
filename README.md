@@ -93,7 +93,6 @@ ai-global update
 | `ai-global update-skills`                | 依安裝紀錄重新安裝所有技能       |
 | `ai-global remove-skill <name>`          | 移除指定技能並清除安裝紀錄       |
 | `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影層   |
-| `ai-global set-category <name> <分類>`   | 搬移技能的分類（`-` 表示不分類） |
 | `ai-global disable <name>`               | 停用技能（不投影給各工具）       |
 | `ai-global enable <name>`                | 解除停用                         |
 | `ai-global list-skills` `ai-global -ls`  | 列出全域 skills（分類樹）        |
@@ -139,7 +138,6 @@ ai-global add-command <user/repo>     # 新增指令
 ai-global update-skills               # 依安裝紀錄重新安裝所有技能
 ai-global remove-skill <name>         # 移除指定技能
 ai-global render-skills               # 重建 skills 投影層
-ai-global set-category <name> <分類>  # 搬移技能分類
 ai-global disable <name>              # 停用技能
 ai-global enable <name>               # 解除停用
 ai-global list-skills                 # 列出 skills（分類樹）
@@ -193,7 +191,7 @@ ai-global list-agents                 # 列出 agents
 
 各 AI 工具都只掃 skills 目錄的**第一層**，沒有一個支援分類子資料夾。所以 AI Global 把技能實體放在 `v-skills/` 做多層分類，再投影成扁平的 symlink 給工具讀。
 
-- **安裝路徑由來源決定**：`v-skills/<作者>/<repo>/<來源分類>/<技能名>/`，手動放的則進 `manual/`
+- **安裝路徑由來源決定**：`v-skills/<作者>/<repo>/<來源分類>/<技能名>/`，手動放的則進 `manual/`。**沒有改分類的指令**——路徑完全由來源決定才可預測、可重現，`update-skills` 也才對得上；真要調整就直接搬 `v-skills/` 底下的目錄，再跑 `render-skills`
 - **要編輯技能就改 `v-skills/` 那份**，`skills/` 底下都是 symlink
 - **同名技能可共存於不同分類，但只能有一個啟用**，其餘用 `disable` 停用
 - 手動丟進 `v-skills/<任意分類>/` 的技能，跑 `render-skills` 就會被投影出來，不需要安裝紀錄

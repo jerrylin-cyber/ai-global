@@ -91,7 +91,6 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | 규칙 추가                               |
 | `ai-global add-command <user/repo>`      | 명령어 추가                             |
 | `ai-global render-skills` `ai-global -rs`| v-skills 기준으로 skills 투영 계층 재생성 |
-| `ai-global set-category <name> <분류>`   | 스킬 분류 이동 (`-` 는 분류 없음) |
 | `ai-global disable <name>`               | 스킬 비활성화 (도구에 투영하지 않음) |
 | `ai-global enable <name>`                | 비활성화 해제                    |
 | `ai-global list-skills` `ai-global -ls`  | 전역 skills 목록 표시                   |
@@ -135,7 +134,6 @@ ai-global add-skill <user/repo>       # 스킬 추가
 ai-global add-rule <user/repo>        # 규칙 추가
 ai-global add-command <user/repo>     # 명령어 추가
 ai-global render-skills               # skills 투영 계층 재생성
-ai-global set-category <name> <분류>  # 스킬 분류 이동
 ai-global disable <name>              # 스킬 비활성화
 ai-global enable <name>               # 비활성화 해제
 ai-global list-skills                 # skills 목록 표시
@@ -185,7 +183,7 @@ ai-global list-agents                 # agents 목록 표시
 
 모든 AI 도구는 skills 디렉토리의 **첫 번째 계층만** 스캔하며, 분류 하위 폴더를 지원하는 도구는 없습니다. 그래서 AI Global은 스킬 실체를 `v-skills/`에 다층 분류로 두고, 평면 symlink로 투영해 각 도구가 읽도록 합니다.
 
-- **설치 경로는 출처에서 결정됩니다**: `v-skills/<작성자>/<repo>/<출처 분류>/<스킬명>/`, 수동으로 넣은 것은 `manual/` 로
+- **설치 경로는 출처에서 결정됩니다**: `v-skills/<작성자>/<repo>/<출처 분류>/<스킬명>/`, 수동으로 넣은 것은 `manual/` 로. **분류를 변경하는 명령은 없습니다** — 경로를 출처만으로 결정해야 예측 가능하고 재현 가능하며, `update-skills` 도 올바른 위치를 가리킵니다. 재배치하려면 `v-skills/` 아래 디렉토리를 직접 옮기고 `render-skills` 를 실행하세요
 - **스킬을 편집하려면 `v-skills/` 쪽을 수정**하세요. `skills/` 아래는 전부 symlink 입니다
 - **같은 이름의 스킬은 서로 다른 분류에 공존할 수 있지만, 활성화는 하나만** 가능합니다. 나머지는 `disable` 로 비활성화하세요
 - `v-skills/<임의 분류>/` 에 직접 넣은 스킬은 `render-skills` 를 실행하면 투영됩니다. 설치 기록은 필요 없습니다

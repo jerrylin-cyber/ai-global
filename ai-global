@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.10.0"
+VERSION="2.10.1"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -62,9 +62,8 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "14|global|update-skills||更新已安裝的 skill"
   "15|global|remove-skill|name|移除 skill"
   "16|global|render-skills||重建 skills 投影"
-  "17|global|set-category|name+category|設定 skill 分類"
-  "18|global|disable|name|停用 skill"
-  "19|global|enable|name|啟用 skill"
+  "17|global|disable|name|停用 skill"
+  "18|global|enable|name|啟用 skill"
   "21|project|update||更新 symlink"
   "22|project|list||列出支援工具"
   "23|project|relink||重建 symlink"
@@ -79,9 +78,8 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "32|project|update-skills||更新已安裝的 skill"
   "33|project|remove-skill|name|移除 skill"
   "34|project|render-skills||重建 skills 投影"
-  "35|project|set-category|name+category|設定 skill 分類"
-  "36|project|disable|name|停用 skill"
-  "37|project|enable|name|啟用 skill"
+  "35|project|disable|name|停用 skill"
+  "36|project|enable|name|啟用 skill"
 )
 
 # 顏色
@@ -139,7 +137,6 @@ format_menu_command() {
     key) echo "$prefix $cmd <key|all>" ;;
     repo) echo "$prefix $cmd <user/repo>" ;;
     name) echo "$prefix $cmd <name>" ;;
-    name+category) echo "$prefix $cmd <name> <分類路徑>" ;;
     *) echo "$prefix $cmd" ;;
   esac
 }
@@ -200,7 +197,6 @@ show_help() {
   echo ""
   echo -e "${BLUE}skill 分類與停用:${NC}"
   echo -e "  ${GREEN}render-skills, -rs${NC}       依 v-skills 重建 skills/ 投影層"
-  echo -e "  ${GREEN}set-category <name> <分類>${NC}  搬移 skill 的分類（分類給 - 表示不分類）"
   echo -e "  ${GREEN}disable <name>${NC}           停用 skill（不投影給各工具，實體與紀錄都保留）"
   echo -e "  ${GREEN}enable <name>${NC}            解除停用"
   echo -e "  ${GRAY}skill 實體放在 .ai-global/v-skills/<作者>/<repo>/<分類>/<名稱>/，${NC}"
@@ -208,7 +204,7 @@ show_help() {
   echo -e "  ${GRAY}同名 skill 可共存於不同分類，但只能有一個啟用。停用清單: .ai-global/disable-skills.md${NC}"
   echo ""
   echo -e "${BLUE}選項:${NC}"
-  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行（支援: update, list, list-*, relink, unlink, add-*, set-category, disable, enable）"
+  echo -e "  ${GREEN}-p, --project${NC}       在目前目錄執行（支援: update, list, list-*, relink, unlink, add-*, disable, enable）"
   echo ""
   echo -e "${BLUE}系統指令:${NC}"
   echo -e "  ${GREEN}upgrade, -u${NC}         升級至最新版本"
@@ -577,7 +573,7 @@ supports_project_mode() {
     add-skill | add-rule | add-command | \
     update-skills | remove-skill | \
     render-skills | -rs | --render-skills | \
-    set-category | disable | enable)
+    disable | enable)
       return 0
       ;;
     *)
@@ -2318,19 +2314,6 @@ disable_list_remove() {
   return 0
 }
 
-# 停用清單：把完全相符的舊路徑改寫成新路徑（供 set-category 搬移後同步）
-disable_list_rename() {
-  local list_file="$1"
-  local old_rel="$2"
-  local new_rel="$3"
-  [[ ! -f "$list_file" ]] && return 1
-  grep -qxF "$old_rel" "$list_file" || return 1
-  local tmp="${list_file}.tmp.$$"
-  awk -v o="$old_rel" -v n="$new_rel" '{ if ($0 == o) print n; else print $0 }' "$list_file" > "$tmp" \
-    && mv -- "$tmp" "$list_file"
-  return 0
-}
-
 # 停用 skill：只動 disable-skills.md 與投影層，不碰實體目錄與 source.md
 disable_skill() {
   local query="$1"
@@ -2380,7 +2363,7 @@ enable_skill() {
   if ! disable_list_remove "$list_file" "$rel"; then
     if is_skill_disabled "$rel" "$base_dir"; then
       log_error "$rel 是被「整個分類停用」的規則命中，不能單獨啟用"
-      log_info "請改用 set-category 把它搬到未停用的分類，或自行編輯 $(beautify_dir "$list_file")"
+      log_info "請自行編輯 $(beautify_dir "$list_file")，移除或改寫那條分類規則"
       return 1
     fi
     log_info "本來就是啟用狀態: $rel"
@@ -2394,116 +2377,6 @@ enable_skill() {
     log_info "請先停用另一個同名 skill，再執行 render-skills"
     return 1
   fi
-}
-
-# 設定 skill 分類：搬移實體 + 同步 source.md 與停用清單 + 重建投影
-set_skill_category() {
-  local query="$1"
-  local category="$2"
-  local base_dir="${3:-$HOME}"
-
-  if [[ -z "$query" ]]; then
-    log_error "用法: ai-global set-category <skill-name|v-skills 相對路徑> <分類路徑>"
-    echo ""
-    echo "範例:"
-    echo "  ai-global set-category pdf anthropics/skills"
-    echo "  ai-global set-category pdf -      # - 表示搬回 skills/ 不分類"
-    return 1
-  fi
-
-  local skills_dir="$base_dir/.ai-global/skills"
-  local vdir
-  vdir=$(vskills_dir "$base_dir")
-  local source_file
-  source_file=$(source_file_path "$base_dir")
-  local list_file
-  list_file=$(disable_list_path "$base_dir")
-
-  log_context_info "$base_dir/.ai-global" || return
-
-  # 找出實體來源：先查 v-skills，再退回 skills/ 底下尚未收攏的實體目錄
-  local old_path="" old_rel="" skill_name=""
-  if resolve_one_skill "$query" "$base_dir" "設定分類" 2> /dev/null; then
-    old_rel="$_RESOLVED_REL"
-    old_path="$vdir/$old_rel"
-    skill_name=$(basename "$old_rel")
-  elif [[ -d "$skills_dir/$query" ]] && [[ ! -L "$skills_dir/$query" ]]; then
-    old_path="$skills_dir/$query"
-    skill_name="$query"
-  else
-    resolve_one_skill "$query" "$base_dir" "設定分類" || return 1
-  fi
-
-  # 決定目標路徑
-  local new_path new_rel=""
-  if [[ -z "$category" ]] || [[ "$category" == "-" ]]; then
-    new_path="$skills_dir/$skill_name"
-  else
-    # 驗證分類路徑的每個 segment
-    local seg
-    local IFS_BAK="$IFS"
-    IFS='/'
-    for seg in $category; do
-      if [[ -z "$seg" ]] || [[ "$seg" == "." ]] || [[ "$seg" == ".." ]] || [[ "$seg" != "$(trim_space "$seg")" ]]; then
-        IFS="$IFS_BAK"
-        log_error "無效的分類路徑: $category"
-        return 1
-      fi
-    done
-    IFS="$IFS_BAK"
-    category="${category%/}"
-    new_rel="$category/$skill_name"
-    new_path="$vdir/$new_rel"
-  fi
-
-  if [[ "$old_path" == "$new_path" ]]; then
-    log_info "位置未變動: $(beautify_dir "$new_path")"
-    return 0
-  fi
-
-  # 搬回 skills/ 時，目標位置往往正是本工具建的投影 symlink，先移除才不會誤判成「已存在」
-  if [[ -L "$new_path" ]]; then
-    local cur_target
-    cur_target=$(readlink "$new_path" 2> /dev/null || true)
-    if [[ "$cur_target" == ../v-skills/* ]] || [[ "$cur_target" == "$vdir"/* ]]; then
-      rm -f -- "$new_path"
-    fi
-  fi
-
-  if [[ -e "$new_path" ]] || [[ -L "$new_path" ]]; then
-    log_error "目標已存在: $(beautify_dir "$new_path")"
-    return 1
-  fi
-
-  # 搬移實體
-  mkdir -p -- "$(dirname "$new_path")"
-  mv -- "$old_path" "$new_path" || {
-    log_error "搬移失敗"
-    return 1
-  }
-
-  # 同步 source.md 的 path 欄位（永遠指向實體位置）
-  local old_recorded new_recorded origin=""
-  old_recorded=$(beautify_dir "$old_path")
-  new_recorded=$(beautify_dir "$new_path")
-  if [[ -f "$source_file" ]]; then
-    origin=$(awk -F'|' -v p="$old_recorded" '$2 == "skill" && $3 == p { print $1 }' "$source_file" | tail -1)
-    drop_source_record "$source_file" "skill" "$old_recorded"
-    [[ -n "$origin" ]] && record_source "$source_file" "$origin" "skill" "$new_recorded"
-  fi
-
-  # 同步停用清單中完全相符的項目
-  if [[ -n "$old_rel" ]] && [[ -n "$new_rel" ]]; then
-    disable_list_rename "$list_file" "$old_rel" "$new_rel" \
-      && log_info "停用清單已同步: $old_rel → $new_rel"
-  elif [[ -n "$old_rel" ]] && [[ -z "$new_rel" ]]; then
-    disable_list_remove "$list_file" "$old_rel" \
-      && log_info "已從停用清單移除（搬出 v-skills）: $old_rel"
-  fi
-
-  log_ok "已搬移: $(beautify_dir "$old_path") → $(beautify_dir "$new_path")"
-
-  render_skills "$base_dir" || return 1
 }
 
 remove_skill() {
@@ -2715,13 +2588,11 @@ show_version() {
 
 INTERACTIVE_CMD=""
 INTERACTIVE_ARG1=""
-INTERACTIVE_ARG2=""
 
 set_interactive_command() {
   local mode="$1"
   local command="$2"
   local argument="$3"
-  local argument2="$4"
 
   if [[ "$mode" == "project" ]]; then
     PROJECT_MODE=true
@@ -2732,7 +2603,6 @@ set_interactive_command() {
 
   INTERACTIVE_CMD="$command"
   INTERACTIVE_ARG1="$argument"
-  INTERACTIVE_ARG2="$argument2"
 }
 
 prompt_interactive_arg() {
@@ -2762,7 +2632,7 @@ show_interactive_menu() {
     return 1
   fi
 
-  local item item_choice mode cmd arg_type label argument argument2
+  local item item_choice mode cmd arg_type label argument
   for item in "${INTERACTIVE_MENU_ITEMS[@]}"; do
     IFS='|' read -r item_choice mode cmd arg_type label <<< "$item"
     [[ "$item_choice" != "$choice" ]] && continue
@@ -2780,18 +2650,12 @@ show_interactive_menu() {
         argument=$(prompt_interactive_arg "skill 名稱（同名時用 v-skills 相對路徑）: ")
         [[ -z "$argument" ]] && { log_error "未輸入 skill 名稱"; return 1; }
         ;;
-      name+category)
-        argument=$(prompt_interactive_arg "skill 名稱（同名時用 v-skills 相對路徑）: ")
-        [[ -z "$argument" ]] && { log_error "未輸入 skill 名稱"; return 1; }
-        argument2=$(prompt_interactive_arg "分類路徑（留白或 - 表示不分類）: ")
-        [[ -z "$argument2" ]] && argument2="-"
-        ;;
       *)
         argument=""
         ;;
     esac
 
-    set_interactive_command "$mode" "$cmd" "$argument" "$argument2"
+    set_interactive_command "$mode" "$cmd" "$argument"
     return 0
   done
 
@@ -2819,12 +2683,10 @@ main() {
     show_interactive_menu || exit 1
     args=("$INTERACTIVE_CMD")
     [[ -n "$INTERACTIVE_ARG1" ]] && args+=("$INTERACTIVE_ARG1")
-    [[ -n "$INTERACTIVE_ARG2" ]] && args+=("$INTERACTIVE_ARG2")
   fi
 
   local cmd="${args[0]}"
   local arg1="${args[1]}"
-  local arg2="${args[2]}"
 
   # 處理空指令
   if [[ -z "$cmd" ]]; then
@@ -2857,7 +2719,6 @@ main() {
         exit 1
       fi
       ;;
-    set-category) set_skill_category "$arg1" "$arg2" "$RUN_BASE_DIR" ;;
     disable) disable_skill "$arg1" "$RUN_BASE_DIR" ;;
     enable) enable_skill "$arg1" "$RUN_BASE_DIR" ;;
     add-rule) add_rule "$arg1" "$RUN_BASE_DIR" ;;

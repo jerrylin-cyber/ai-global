@@ -91,7 +91,6 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | 添加规则                     |
 | `ai-global add-command <user/repo>`      | 添加命令                     |
 | `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影层   |
-| `ai-global set-category <name> <分类>`   | 移动技能的分类（`-` 表示不分类） |
 | `ai-global disable <name>`               | 停用技能（不投影给各工具）       |
 | `ai-global enable <name>`                | 解除停用                         |
 | `ai-global list-skills` `ai-global -ls`  | 列出全局 skills              |
@@ -135,7 +134,6 @@ ai-global add-skill <user/repo>       # 添加技能
 ai-global add-rule <user/repo>        # 添加规则
 ai-global add-command <user/repo>     # 添加命令
 ai-global render-skills               # 重建 skills 投影层
-ai-global set-category <name> <分类>  # 移动技能分类
 ai-global disable <name>              # 停用技能
 ai-global enable <name>               # 解除停用
 ai-global list-skills                 # 列出 skills
@@ -185,7 +183,7 @@ ai-global list-agents                 # 列出 agents
 
 各 AI 工具都只扫描 skills 目录的**第一层**，没有一个支持分类子文件夹。所以 AI Global 把技能实体放在 `v-skills/` 做多层分类，再投影成扁平的 symlink 供工具读取。
 
-- **安装路径由来源决定**：`v-skills/<作者>/<repo>/<来源分类>/<技能名>/`，手动放置的则进 `manual/`
+- **安装路径由来源决定**：`v-skills/<作者>/<repo>/<来源分类>/<技能名>/`，手动放置的则进 `manual/`。**没有修改分类的命令**——路径完全由来源决定才可预测、可重现，`update-skills` 也才对得上；确实需要调整就直接移动 `v-skills/` 下的目录，再运行 `render-skills`
 - **要编辑技能就改 `v-skills/` 那份**，`skills/` 下面都是 symlink
 - **同名技能可共存于不同分类，但只能有一个启用**，其余用 `disable` 停用
 - 手动放进 `v-skills/<任意分类>/` 的技能，运行 `render-skills` 就会被投影出来，不需要安装记录

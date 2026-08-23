@@ -91,7 +91,6 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global add-rule <user/repo>`         | Add rules from GitHub repository       |
 | `ai-global add-command <user/repo>`      | Add commands from GitHub repository    |
 | `ai-global render-skills` `ai-global -rs`| Rebuild the skills projection from v-skills |
-| `ai-global set-category <name> <category>`| Move a skill to another category (`-` = uncategorized) |
 | `ai-global disable <name>`               | Disable a skill (not projected to any tool) |
 | `ai-global enable <name>`                | Re-enable a skill               |
 | `ai-global list-skills` `ai-global -ls`  | List global skills                     |
@@ -135,7 +134,6 @@ ai-global add-skill <user/repo>       # Add skills
 ai-global add-rule <user/repo>        # Add rules
 ai-global add-command <user/repo>     # Add commands
 ai-global render-skills               # Rebuild the skills projection
-ai-global set-category <name> <cat>   # Move a skill to another category
 ai-global disable <name>              # Disable a skill
 ai-global enable <name>               # Re-enable a skill
 ai-global list-skills                 # List skills
@@ -185,7 +183,7 @@ Short aliases are also available: `-ls`, `-lr`, `-lc`, `-la`.
 
 Every AI tool scans only the **first level** of its skills directory — none of them support category subfolders. So AI Global keeps the actual skill directories under `v-skills/` with nested categories, and projects them as a flat set of symlinks for the tools to read.
 
-- **The install path comes from the source**: `v-skills/<owner>/<repo>/<source-bucket>/<skill>/`; manually added skills go to `manual/`
+- **The install path comes from the source**: `v-skills/<owner>/<repo>/<source-bucket>/<skill>/`; manually added skills go to `manual/`. **There is no command to change a skill's category** — deriving the path entirely from the source keeps it predictable and reproducible, and keeps `update-skills` pointing at the right place. To rearrange, move the directory under `v-skills/` yourself and run `render-skills`
 - **Edit the copy under `v-skills/`** — everything in `skills/` is a symlink
 - **Skills with the same name can coexist in different categories, but only one may be enabled**; disable the rest
 - A skill dropped into `v-skills/<any-category>/` by hand shows up after `render-skills`, no install record needed
