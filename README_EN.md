@@ -72,7 +72,7 @@ This will:
 3. Merge AGENTS.md/skills/agents/rules/commands from detected tools
 4. Create symlinks from each tool's config to shared directories
 
-Note: AI Global only handles tool directories that already exist. It does not create directories like `.github`, `.kiro`, or `.cursor` for you.
+Note: AI Global only handles tool directories that already exist. It does not create directories like `.github` or `.kiro` for you.
 
 ### Commands
 
@@ -90,6 +90,10 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global add-skill <user/repo>`        | Add skills from GitHub repository      |
 | `ai-global add-rule <user/repo>`         | Add rules from GitHub repository       |
 | `ai-global add-command <user/repo>`      | Add commands from GitHub repository    |
+| `ai-global render-skills` `ai-global -rs`| Rebuild the skills projection from v-skills |
+| `ai-global set-category <name> <category>`| Move a skill to another category (`-` = uncategorized) |
+| `ai-global disable <name>`               | Disable a skill (not projected to any tool) |
+| `ai-global enable <name>`                | Re-enable a skill               |
 | `ai-global list-skills` `ai-global -ls`  | List global skills                     |
 | `ai-global list-rules` `ai-global -lr`   | List global rules                      |
 | `ai-global list-commands` `ai-global -lc`| List global commands                   |
@@ -121,10 +125,8 @@ Project mode has its own tool directory mapping to avoid applying the global con
 | Claude Code | `.claude/CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
 | Copilot CLI | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/prompts/` |
-| Cursor | `.cursor/AGENTS.md`, `.cursor/rules/`, `.cursor/commands/`, `.cursor/skills/`, `.cursor/agents/` |
-| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/`, `.gemini/antigravity/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/` |
 | OpenCode | `.opencode/AGENTS.md`, `.opencode/commands/`, `.opencode/skills/`, `.opencode/agents/` |
-| Windsurf | `.windsurf/AGENTS.md`, `.windsurf/rules/`, `.windsurf/skills/` |
 
 ### Add resources
 
@@ -132,6 +134,10 @@ Project mode has its own tool directory mapping to avoid applying the global con
 ai-global add-skill <user/repo>       # Add skills
 ai-global add-rule <user/repo>        # Add rules
 ai-global add-command <user/repo>     # Add commands
+ai-global render-skills               # Rebuild the skills projection
+ai-global set-category <name> <cat>   # Move a skill to another category
+ai-global disable <name>              # Disable a skill
+ai-global enable <name>               # Re-enable a skill
 ai-global list-skills                 # List skills
 ai-global list-rules                  # List rules
 ai-global list-commands               # List commands
@@ -148,32 +154,62 @@ Short aliases are also available: `-ls`, `-lr`, `-lc`, `-la`.
 
 ```
 ~/.ai-global/
-├── AGENTS.md        <- Shared AGENTS.md (edit this)
-├── skills/          <- Shared skills (merged from all tools)
-├── agents/          <- Shared agents
-├── rules/           <- Shared rules
-├── commands/        <- Shared slash commands
-└── backups/         <- Original configs (backups)
+├── AGENTS.md            <- Shared AGENTS.md (edit this)
+├── v-skills/            <- Skill payloads, nested categories (edit here)
+│   ├── anthropics/skills/pdf/
+│   ├── lazyjerry/mattpocock-skills/engineering/codebase-design/
+│   └── manual/my-own-skill/
+├── skills/              <- Flat projection layer, what tools read (all symlinks)
+│   ├── pdf             -> ../v-skills/anthropics/skills/pdf
+│   └── codebase-design -> ../v-skills/lazyjerry/mattpocock-skills/engineering/codebase-design
+├── disable-skills.md    <- Disabled list
+├── source.md            <- Install source records
+├── agents/              <- Shared agents
+├── rules/               <- Shared rules
+├── commands/            <- Shared slash commands
+└── backups/             <- Original configs (backups)
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (symlink)
 ├── skills/   -> ~/.ai-global/skills/          (symlink)
 └── commands/ -> ~/.ai-global/commands/        (symlink)
 
-~/.cursor/
+~/.agents/
 ├── AGENTS.md -> ~/.ai-global/AGENTS.md        (symlink)
 └── skills/   -> ~/.ai-global/skills/          (symlink)
 
 ... and more tools
 ```
 
+### Skill categories (v-skills)
+
+Every AI tool scans only the **first level** of its skills directory — none of them support category subfolders. So AI Global keeps the actual skill directories under `v-skills/` with nested categories, and projects them as a flat set of symlinks for the tools to read.
+
+- **The install path comes from the source**: `v-skills/<owner>/<repo>/<source-bucket>/<skill>/`; manually added skills go to `manual/`
+- **Edit the copy under `v-skills/`** — everything in `skills/` is a symlink
+- **Skills with the same name can coexist in different categories, but only one may be enabled**; disable the rest
+- A skill dropped into `v-skills/<any-category>/` by hand shows up after `render-skills`, no install record needed
+- `update-skills` adopts any skill still sitting directly under `skills/` into `v-skills/` (it prints the full mapping and asks first)
+
+`disable-skills.md` holds one v-skills relative path per line; a trailing `/` disables the whole category:
+
+```
+# Disable a whole category
+lazyjerry/mattpocock-skills/in-progress/
+
+# Disable one skill
+anthropics/skills/pdf
+```
+
+Disabling only affects the projection layer — the payload directory and the install record are left untouched.
+
 ### Merge behavior
 
 When you run `ai-global`, it merges items from all tools by filename:
 
-- Cursor has skills: `react/`, `typescript/`
+- Codex has skills: `react/`, `typescript/`
 - Claude has skills: `typescript/`, `python/`
-- Result in `.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- Result: `react/`, `typescript/`, `python/`
 
 **Last file wins** (later tools overwrite earlier tools with same filename).
 
@@ -185,10 +221,8 @@ When you run `ai-global`, it merges items from all tools by filename:
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
 | Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
 ## Uninstall
 

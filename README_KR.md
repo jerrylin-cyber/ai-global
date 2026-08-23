@@ -72,7 +72,7 @@ ai-global update
 3. 감지된 도구의 AGENTS.md/skills/agents/rules/commands를 병합합니다
 4. 각 도구의 설정에서 공유 디렉토리로 심볼릭 링크를 생성합니다
 
-참고: AI Global은 이미 존재하는 도구 디렉토리만 처리하며, `.github`, `.kiro`, `.cursor` 같은 디렉토리를 자동으로 만들지는 않습니다.
+참고: AI Global은 이미 존재하는 도구 디렉토리만 처리하며, `.github`, `.kiro` 같은 디렉토리를 자동으로 만들지는 않습니다.
 
 ### 명령어 목록
 
@@ -90,6 +90,10 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | 스킬 추가                               |
 | `ai-global add-rule <user/repo>`         | 규칙 추가                               |
 | `ai-global add-command <user/repo>`      | 명령어 추가                             |
+| `ai-global render-skills` `ai-global -rs`| v-skills 기준으로 skills 투영 계층 재생성 |
+| `ai-global set-category <name> <분류>`   | 스킬 분류 이동 (`-` 는 분류 없음) |
+| `ai-global disable <name>`               | 스킬 비활성화 (도구에 투영하지 않음) |
+| `ai-global enable <name>`                | 비활성화 해제                    |
 | `ai-global list-skills` `ai-global -ls`  | 전역 skills 목록 표시                   |
 | `ai-global list-rules` `ai-global -lr`   | 전역 rules 목록 표시                    |
 | `ai-global list-commands` `ai-global -lc`| 전역 commands 목록 표시                 |
@@ -121,10 +125,8 @@ ai-global -p add-skill <user/repo>
 | Claude Code | `.claude/CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
 | Copilot CLI | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/prompts/` |
-| Cursor | `.cursor/AGENTS.md`, `.cursor/rules/`, `.cursor/commands/`, `.cursor/skills/`, `.cursor/agents/` |
-| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/`, `.gemini/antigravity/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`, `.gemini/.agents/rules/` |
 | OpenCode | `.opencode/AGENTS.md`, `.opencode/commands/`, `.opencode/skills/`, `.opencode/agents/` |
-| Windsurf | `.windsurf/AGENTS.md`, `.windsurf/rules/`, `.windsurf/skills/` |
 
 ### 리소스 추가
 
@@ -132,6 +134,10 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # 스킬 추가
 ai-global add-rule <user/repo>        # 규칙 추가
 ai-global add-command <user/repo>     # 명령어 추가
+ai-global render-skills               # skills 투영 계층 재생성
+ai-global set-category <name> <분류>  # 스킬 분류 이동
+ai-global disable <name>              # 스킬 비활성화
+ai-global enable <name>               # 비활성화 해제
 ai-global list-skills                 # skills 목록 표시
 ai-global list-rules                  # rules 목록 표시
 ai-global list-commands               # commands 목록 표시
@@ -148,32 +154,62 @@ ai-global list-agents                 # agents 목록 표시
 
 ```
 ~/.ai-global/
-├── AGENTS.md        <- 공유 AGENTS.md (이 파일을 편집하세요)
-├── skills/          <- 공유 스킬 (모든 도구에서 병합됨)
-├── agents/          <- 공유 에이전트
-├── rules/           <- 공유 규칙
-├── commands/        <- 공유 슬래시 명령어
-└── backups/         <- 원본 설정 (백업)
+├── AGENTS.md            <- 공유 AGENTS.md (이 파일을 편집)
+├── v-skills/            <- 스킬 실체, 다층 분류 (편집은 여기서)
+│   ├── anthropics/skills/pdf/
+│   ├── lazyjerry/mattpocock-skills/engineering/codebase-design/
+│   └── manual/my-own-skill/
+├── skills/              <- 평면 투영 계층, 각 도구가 읽는 곳 (모두 symlink)
+│   ├── pdf             -> ../v-skills/anthropics/skills/pdf
+│   └── codebase-design -> ../v-skills/lazyjerry/mattpocock-skills/engineering/codebase-design
+├── disable-skills.md    <- 비활성화 목록
+├── source.md            <- 설치 출처 기록
+├── agents/              <- 공유 에이전트
+├── rules/               <- 공유 규칙
+├── commands/            <- 공유 슬래시 명령
+└── backups/             <- 원본 설정 (백업)
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (심볼릭 링크)
 ├── skills/   -> ~/.ai-global/skills/          (심볼릭 링크)
 └── commands/ -> ~/.ai-global/commands/        (심볼릭 링크)
 
-~/.cursor/
+~/.agents/
 ├── AGENTS.md -> ~/.ai-global/AGENTS.md        (심볼릭 링크)
 └── skills/   -> ~/.ai-global/skills/          (심볼릭 링크)
 
-... 기타 도구들
+... 그 외 도구들
 ```
+
+### 스킬 분류 (v-skills)
+
+모든 AI 도구는 skills 디렉토리의 **첫 번째 계층만** 스캔하며, 분류 하위 폴더를 지원하는 도구는 없습니다. 그래서 AI Global은 스킬 실체를 `v-skills/`에 다층 분류로 두고, 평면 symlink로 투영해 각 도구가 읽도록 합니다.
+
+- **설치 경로는 출처에서 결정됩니다**: `v-skills/<작성자>/<repo>/<출처 분류>/<스킬명>/`, 수동으로 넣은 것은 `manual/` 로
+- **스킬을 편집하려면 `v-skills/` 쪽을 수정**하세요. `skills/` 아래는 전부 symlink 입니다
+- **같은 이름의 스킬은 서로 다른 분류에 공존할 수 있지만, 활성화는 하나만** 가능합니다. 나머지는 `disable` 로 비활성화하세요
+- `v-skills/<임의 분류>/` 에 직접 넣은 스킬은 `render-skills` 를 실행하면 투영됩니다. 설치 기록은 필요 없습니다
+- `update-skills` 는 아직 `skills/` 바로 아래에 남아 있는 실체 스킬을 `v-skills/` 로 정리합니다 (대응 목록을 먼저 보여주고 확인을 요청합니다)
+
+비활성화 목록 `disable-skills.md` 는 한 줄에 v-skills 상대 경로 하나이며, `/` 로 끝나면 분류 전체가 대상입니다:
+
+```
+# 분류 전체 비활성화
+lazyjerry/mattpocock-skills/in-progress/
+
+# 개별 스킬
+anthropics/skills/pdf
+```
+
+비활성화는 투영 계층에만 영향을 주며, 실체 디렉토리와 설치 기록은 변경되지 않습니다.
 
 ### 병합 동작
 
 `ai-global`을 실행하면 파일 이름을 기준으로 모든 도구의 내용을 병합합니다:
 
-- Cursor의 스킬: `react/`, `typescript/`
+- Codex의 스킬: `react/`, `typescript/`
 - Claude의 스킬: `typescript/`, `python/`
-- 병합 결과 `.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- 병합 결과: `react/`, `typescript/`, `python/`
 
 **나중에 발견된 파일이 우선됩니다** (나중에 발견된 도구가 동일한 이름의 파일을 덮어씁니다).
 
@@ -185,10 +221,8 @@ ai-global list-agents                 # agents 목록 표시
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
 | Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
 ## 제거
 

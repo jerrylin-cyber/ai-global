@@ -72,7 +72,7 @@ ai-global update
 3. 検出されたツールの AGENTS.md/skills/agents/rules/commands をマージ
 4. 各ツールの設定から共有ディレクトリへのシンボリックリンクを作成
 
-注意：AI Global が処理するのは、すでに存在するツールディレクトリだけです。`.github`、`.kiro`、`.cursor` のようなディレクトリは自動作成されません。
+注意：AI Global が処理するのは、すでに存在するツールディレクトリだけです。`.github`、`.kiro` のようなディレクトリは自動作成されません。
 
 ### コマンド一覧
 
@@ -90,6 +90,10 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | スキルを追加                                         |
 | `ai-global add-rule <user/repo>`         | ルールを追加                                         |
 | `ai-global add-command <user/repo>`      | コマンドを追加                                       |
+| `ai-global render-skills` `ai-global -rs`| v-skills から skills 投影層を再構築 |
+| `ai-global set-category <name> <分類>`   | スキルの分類を移動（`-` は分類なし） |
+| `ai-global disable <name>`               | スキルを無効化（各ツールへ投影しない） |
+| `ai-global enable <name>`                | 無効化を解除                     |
 | `ai-global list-skills` `ai-global -ls`  | グローバル skills を一覧表示                         |
 | `ai-global list-rules` `ai-global -lr`   | グローバル rules を一覧表示                          |
 | `ai-global list-commands` `ai-global -lc`| グローバル commands を一覧表示                       |
@@ -121,10 +125,8 @@ ai-global -p add-skill <user/repo>
 | Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
-| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
-| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/` |
 | OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
-| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### リソースを追加
 
@@ -132,6 +134,10 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # スキルを追加
 ai-global add-rule <user/repo>        # ルールを追加
 ai-global add-command <user/repo>     # コマンドを追加
+ai-global render-skills               # skills 投影層を再構築
+ai-global set-category <name> <分類>  # スキルの分類を移動
+ai-global disable <name>              # スキルを無効化
+ai-global enable <name>               # 無効化を解除
 ai-global list-skills                 # skills を一覧表示
 ai-global list-rules                  # rules を一覧表示
 ai-global list-commands               # commands を一覧表示
@@ -148,32 +154,62 @@ ai-global list-agents                 # agents を一覧表示
 
 ```
 ~/.ai-global/
-├── AGENTS.md        <- 共有 AGENTS.md（これを編集）
-├── skills/          <- 共有スキル（すべてのツールからマージ）
-├── agents/          <- 共有エージェント
-├── rules/           <- 共有ルール
-├── commands/        <- 共有スラッシュコマンド
-└── backups/         <- 元の設定（バックアップ）
+├── AGENTS.md            <- 共有 AGENTS.md（これを編集）
+├── v-skills/            <- スキル実体、多層分類（編集はこちら）
+│   ├── anthropics/skills/pdf/
+│   ├── lazyjerry/mattpocock-skills/engineering/codebase-design/
+│   └── manual/my-own-skill/
+├── skills/              <- フラットな投影層、各ツールはここを読む（すべて symlink）
+│   ├── pdf             -> ../v-skills/anthropics/skills/pdf
+│   └── codebase-design -> ../v-skills/lazyjerry/mattpocock-skills/engineering/codebase-design
+├── disable-skills.md    <- 無効化リスト
+├── source.md            <- インストール元の記録
+├── agents/              <- 共有エージェント
+├── rules/               <- 共有ルール
+├── commands/            <- 共有スラッシュコマンド
+└── backups/             <- 元の設定（バックアップ）
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (シンボリックリンク)
 ├── skills/   -> ~/.ai-global/skills/          (シンボリックリンク)
 └── commands/ -> ~/.ai-global/commands/        (シンボリックリンク)
 
-~/.cursor/
+~/.agents/
 ├── AGENTS.md -> ~/.ai-global/AGENTS.md        (シンボリックリンク)
 └── skills/   -> ~/.ai-global/skills/          (シンボリックリンク)
 
 ... その他のツール
 ```
 
+### スキルの分類（v-skills）
+
+各 AI ツールは skills ディレクトリの**第一階層しか**スキャンせず、分類サブフォルダに対応しているものはありません。そのため AI Global はスキル実体を `v-skills/` に多層分類で置き、フラットな symlink として各ツールに投影します。
+
+- **インストール先は取得元から決まります**：`v-skills/<作者>/<repo>/<取得元の分類>/<スキル名>/`、手動で置いたものは `manual/` へ
+- **スキルの編集は `v-skills/` 側で**。`skills/` 配下はすべて symlink です
+- **同名スキルは別々の分類に共存できますが、有効にできるのは 1 つだけ**。残りは `disable` で無効化してください
+- `v-skills/<任意の分類>/` に手動で置いたスキルは `render-skills` で投影されます。インストール記録は不要です
+- `update-skills` は `skills/` 直下に残っている実体スキルを `v-skills/` へ取り込みます（対応表を表示して確認を求めます）
+
+無効化リスト `disable-skills.md` は 1 行 1 つの v-skills 相対パス。末尾が `/` なら分類全体が対象です：
+
+```
+# 分類全体を無効化
+lazyjerry/mattpocock-skills/in-progress/
+
+# 個別のスキル
+anthropics/skills/pdf
+```
+
+無効化は投影層にのみ影響し、実体ディレクトリとインストール記録は変更されません。
+
 ### マージ動作
 
 `ai-global` を実行すると、ファイル名に基づいてすべてのツールの内容をマージします：
 
-- Cursor のスキル: `react/`, `typescript/`
+- Codex のスキル: `react/`, `typescript/`
 - Claude のスキル: `typescript/`, `python/`
-- マージ結果 `.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- マージ結果: `react/`, `typescript/`, `python/`
 
 **最後に見つかったファイルが優先されます**（後のツールが同名ファイルを上書きします）。
 
@@ -185,10 +221,8 @@ ai-global list-agents                 # agents を一覧表示
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
 | Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
 ## アンインストール
 

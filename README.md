@@ -72,7 +72,7 @@ ai-global update
 3. 合併偵測到的工具的 AGENTS.md/skills/agents/rules/commands
 4. 建立從各工具設定到共享目錄的符號連結
 
-注意：AI Global 只會處理已存在的工具目錄，不會替你建立像 `.github`、`.kiro`、`.cursor` 這類目錄。
+注意：AI Global 只會處理已存在的工具目錄，不會替你建立像 `.github`、`.kiro` 這類目錄。
 
 ### 指令列表
 
@@ -92,7 +92,11 @@ ai-global update
 | `ai-global add-command <user/repo>`      | 新增指令                         |
 | `ai-global update-skills`                | 依安裝紀錄重新安裝所有技能       |
 | `ai-global remove-skill <name>`          | 移除指定技能並清除安裝紀錄       |
-| `ai-global list-skills` `ai-global -ls`  | 列出全域 skills                  |
+| `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影層   |
+| `ai-global set-category <name> <分類>`   | 搬移技能的分類（`-` 表示不分類） |
+| `ai-global disable <name>`               | 停用技能（不投影給各工具）       |
+| `ai-global enable <name>`                | 解除停用                         |
+| `ai-global list-skills` `ai-global -ls`  | 列出全域 skills（分類樹）        |
 | `ai-global list-rules` `ai-global -lr`   | 列出全域 rules                   |
 | `ai-global list-commands` `ai-global -lc`| 列出全域 commands                |
 | `ai-global list-agents` `ai-global -la`  | 列出全域 agents                  |
@@ -123,10 +127,8 @@ ai-global -p add-skill <user/repo>
 | Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
-| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
-| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/` |
 | OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
-| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### 新增資源
 
@@ -136,7 +138,11 @@ ai-global add-rule <user/repo>        # 新增規則
 ai-global add-command <user/repo>     # 新增指令
 ai-global update-skills               # 依安裝紀錄重新安裝所有技能
 ai-global remove-skill <name>         # 移除指定技能
-ai-global list-skills                 # 列出 skills
+ai-global render-skills               # 重建 skills 投影層
+ai-global set-category <name> <分類>  # 搬移技能分類
+ai-global disable <name>              # 停用技能
+ai-global enable <name>               # 解除停用
+ai-global list-skills                 # 列出 skills（分類樹）
 ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
 ai-global list-agents                 # 列出 agents
@@ -144,7 +150,7 @@ ai-global list-agents                 # 列出 agents
 
 `add-*` 會將來源記錄在 `.ai-global/source.md`（格式 `GitHub URL|類型|安裝路徑`）。`update-skills` 依此紀錄重新 clone 並覆蓋既有 skill，只更新紀錄中已安裝的項目，不會安裝倉庫後來新增的 skill（那些請用 `add-skill`）。執行前會將原紀錄備份為 `source.md.bak`。本地自建、未經 `add-skill` 安裝的 skill 沒有紀錄，不受影響。
 
-`remove-skill` 刪除 `.ai-global/skills/<name>` 並同步移除該筆紀錄。由於各工具的 skills 目錄是整個目錄的 symlink，刪除後所有工具同步生效，不需逐一清理。刪除前會顯示安裝來源供確認；若該 skill 沒有來源紀錄（本地自建），會額外警告刪除後無法自動還原。**刪除不可復原，skills 不在備份機制涵蓋範圍內。**
+`remove-skill` 刪除 v-skills 中的實體目錄、對應的投影 symlink、該筆安裝紀錄與停用清單項目。由於各工具的 skills 目錄是整個目錄的 symlink，刪除後所有工具同步生效，不需逐一清理。刪除前會顯示安裝來源供確認；若該 skill 沒有來源紀錄（本地自建），會額外警告刪除後無法自動還原。**刪除不可復原，skills 不在備份機制涵蓋範圍內。**
 
 支援 `user/repo` 或 `https://github.com/user/repo` 格式，資源將被下載至 `.ai-global/` 對應子目錄。
 
@@ -156,32 +162,62 @@ ai-global list-agents                 # 列出 agents
 
 ```
 ~/.ai-global/
-├── AGENTS.md        <- 共享 AGENTS.md（編輯這個）
-├── skills/          <- 共享技能（從所有工具合併）
-├── agents/          <- 共享代理
-├── rules/           <- 共享規則
-├── commands/        <- 共享斜線指令
-└── backups/         <- 原始設定（備份）
+├── AGENTS.md            <- 共享 AGENTS.md（編輯這個）
+├── v-skills/            <- 技能實體，多層分類（要編輯就改這裡）
+│   ├── anthropics/skills/pdf/
+│   ├── lazyjerry/mattpocock-skills/engineering/codebase-design/
+│   └── manual/my-own-skill/
+├── skills/              <- 扁平投影層，各工具讀這裡（全是 symlink）
+│   ├── pdf             -> ../v-skills/anthropics/skills/pdf
+│   └── codebase-design -> ../v-skills/lazyjerry/mattpocock-skills/engineering/codebase-design
+├── disable-skills.md    <- 停用清單
+├── source.md            <- 安裝來源紀錄
+├── agents/              <- 共享代理
+├── rules/               <- 共享規則
+├── commands/            <- 共享斜線指令
+└── backups/             <- 原始設定（備份）
 
 ~/.claude/
 ├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (符號連結)
 ├── skills/   -> ~/.ai-global/skills/          (符號連結)
 └── commands/ -> ~/.ai-global/commands/        (符號連結)
 
-~/.cursor/
+~/.agents/
 ├── AGENTS.md -> ~/.ai-global/AGENTS.md        (符號連結)
 └── skills/   -> ~/.ai-global/skills/          (符號連結)
 
 ... 以及更多工具
 ```
 
+### 技能分類（v-skills）
+
+各 AI 工具都只掃 skills 目錄的**第一層**，沒有一個支援分類子資料夾。所以 AI Global 把技能實體放在 `v-skills/` 做多層分類，再投影成扁平的 symlink 給工具讀。
+
+- **安裝路徑由來源決定**：`v-skills/<作者>/<repo>/<來源分類>/<技能名>/`，手動放的則進 `manual/`
+- **要編輯技能就改 `v-skills/` 那份**，`skills/` 底下都是 symlink
+- **同名技能可共存於不同分類，但只能有一個啟用**，其餘用 `disable` 停用
+- 手動丟進 `v-skills/<任意分類>/` 的技能，跑 `render-skills` 就會被投影出來，不需要安裝紀錄
+- `update-skills` 會把還留在 `skills/` 底下的實體技能收攏進 `v-skills/`（會先列出對照清單並要求確認）
+
+停用清單 `disable-skills.md` 一行一個 v-skills 相對路徑，`/` 結尾表示整個分類：
+
+```
+# 整個分類停用
+lazyjerry/mattpocock-skills/in-progress/
+
+# 個別技能
+anthropics/skills/pdf
+```
+
+停用只影響投影層，實體目錄與安裝紀錄都不會被動到。
+
 ### 合併行為
 
 執行 `ai-global` 時，會按檔案名稱合併所有工具的內容：
 
-- Cursor 有 skills: `react/`, `typescript/`
+- Codex 有 skills: `react/`, `typescript/`
 - Claude 有 skills: `typescript/`, `python/`
-- 合併結果 `.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- 合併結果: `react/`, `typescript/`, `python/`
 
 **最後找到的檔案優先**（後找到的工具會覆蓋同名檔案）。
 
@@ -193,10 +229,8 @@ ai-global list-agents                 # 列出 agents
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
 | Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
 ## 解除安裝
 

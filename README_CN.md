@@ -72,7 +72,7 @@ ai-global update
 3. 合并检测到的工具的 AGENTS.md/skills/agents/rules/commands
 4. 创建从各工具配置到共享目录的软链
 
-注意：AI Global 只会处理已经存在的工具目录，不会帮你创建 `.github`、`.kiro`、`.cursor` 这类目录。
+注意：AI Global 只会处理已经存在的工具目录，不会帮你创建 `.github`、`.kiro` 这类目录。
 
 ### 命令列表
 
@@ -90,6 +90,10 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | 添加技能                     |
 | `ai-global add-rule <user/repo>`         | 添加规则                     |
 | `ai-global add-command <user/repo>`      | 添加命令                     |
+| `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影层   |
+| `ai-global set-category <name> <分类>`   | 移动技能的分类（`-` 表示不分类） |
+| `ai-global disable <name>`               | 停用技能（不投影给各工具）       |
+| `ai-global enable <name>`                | 解除停用                         |
 | `ai-global list-skills` `ai-global -ls`  | 列出全局 skills              |
 | `ai-global list-rules` `ai-global -lr`   | 列出全局 rules               |
 | `ai-global list-commands` `ai-global -lc`| 列出全局 commands            |
@@ -121,10 +125,8 @@ ai-global -p add-skill <user/repo>
 | Claude Code | `.claude/CLAUDE.md`、`.claude/commands/`、`.claude/skills/`、`.claude/agents/` |
 | Codex Skills | `.agents/skills/` |
 | Copilot CLI | `.github/copilot-instructions.md`、`.github/instructions/`、`.github/prompts/` |
-| Cursor | `.cursor/AGENTS.md`、`.cursor/rules/`、`.cursor/commands/`、`.cursor/skills/`、`.cursor/agents/` |
-| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/`、`.gemini/antigravity/skills/` |
+| Antigravity CLI | `.gemini/GEMINI.md`、`.gemini/.agents/rules/` |
 | OpenCode | `.opencode/AGENTS.md`、`.opencode/commands/`、`.opencode/skills/`、`.opencode/agents/` |
-| Windsurf | `.windsurf/AGENTS.md`、`.windsurf/rules/`、`.windsurf/skills/` |
 
 ### 添加资源
 
@@ -132,6 +134,10 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # 添加技能
 ai-global add-rule <user/repo>        # 添加规则
 ai-global add-command <user/repo>     # 添加命令
+ai-global render-skills               # 重建 skills 投影层
+ai-global set-category <name> <分类>  # 移动技能分类
+ai-global disable <name>              # 停用技能
+ai-global enable <name>               # 解除停用
 ai-global list-skills                 # 列出 skills
 ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
@@ -148,32 +154,62 @@ ai-global list-agents                 # 列出 agents
 
 ```
 ~/.ai-global/
-├── AGENTS.md        <- 共享 AGENTS.md（编辑这个）
-├── skills/          <- 共享技能（从所有工具合并）
-├── agents/          <- 共享代理
-├── rules/           <- 共享规则
-├── commands/        <- 共享斜杠命令
-└── backups/         <- 原始配置（备份）
+├── AGENTS.md            <- 共享 AGENTS.md（编辑这个）
+├── v-skills/            <- 技能实体，多层分类（要编辑就改这里）
+│   ├── anthropics/skills/pdf/
+│   ├── lazyjerry/mattpocock-skills/engineering/codebase-design/
+│   └── manual/my-own-skill/
+├── skills/              <- 扁平投影层，各工具读这里（全是 symlink）
+│   ├── pdf             -> ../v-skills/anthropics/skills/pdf
+│   └── codebase-design -> ../v-skills/lazyjerry/mattpocock-skills/engineering/codebase-design
+├── disable-skills.md    <- 停用清单
+├── source.md            <- 安装来源记录
+├── agents/              <- 共享代理
+├── rules/               <- 共享规则
+├── commands/            <- 共享斜线命令
+└── backups/             <- 原始配置（备份）
 
 ~/.claude/
-├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (软链)
-├── skills/   -> ~/.ai-global/skills/          (软链)
-└── commands/ -> ~/.ai-global/commands/        (软链)
+├── CLAUDE.md -> ~/.ai-global/AGENTS.md        (符号链接)
+├── skills/   -> ~/.ai-global/skills/          (符号链接)
+└── commands/ -> ~/.ai-global/commands/        (符号链接)
 
-~/.cursor/
-├── AGENTS.md -> ~/.ai-global/AGENTS.md        (软链)
-└── skills/   -> ~/.ai-global/skills/          (软链)
+~/.agents/
+├── AGENTS.md -> ~/.ai-global/AGENTS.md        (符号链接)
+└── skills/   -> ~/.ai-global/skills/          (符号链接)
 
 ... 以及更多工具
 ```
+
+### 技能分类（v-skills）
+
+各 AI 工具都只扫描 skills 目录的**第一层**，没有一个支持分类子文件夹。所以 AI Global 把技能实体放在 `v-skills/` 做多层分类，再投影成扁平的 symlink 供工具读取。
+
+- **安装路径由来源决定**：`v-skills/<作者>/<repo>/<来源分类>/<技能名>/`，手动放置的则进 `manual/`
+- **要编辑技能就改 `v-skills/` 那份**，`skills/` 下面都是 symlink
+- **同名技能可共存于不同分类，但只能有一个启用**，其余用 `disable` 停用
+- 手动放进 `v-skills/<任意分类>/` 的技能，运行 `render-skills` 就会被投影出来，不需要安装记录
+- `update-skills` 会把还留在 `skills/` 下面的实体技能收拢进 `v-skills/`（会先列出对照清单并要求确认）
+
+停用清单 `disable-skills.md` 一行一个 v-skills 相对路径，`/` 结尾表示整个分类：
+
+```
+# 整个分类停用
+lazyjerry/mattpocock-skills/in-progress/
+
+# 单个技能
+anthropics/skills/pdf
+```
+
+停用只影响投影层，实体目录与安装记录都不会被改动。
 
 ### 合并行为
 
 运行 `ai-global` 时，会按文件名合并所有工具的内容：
 
-- Cursor 有 skills: `react/`, `typescript/`
+- Codex 有 skills: `react/`, `typescript/`
 - Claude 有 skills: `typescript/`, `python/`
-- 合并结果 `.ai-global/skills/`: `react/`, `typescript/`, `python/`
+- 合并结果: `react/`, `typescript/`, `python/`
 
 **最后找到的优先**（后找到的会覆盖同名文件夹）。
 
@@ -185,10 +221,8 @@ ai-global list-agents                 # 列出 agents
 | Clawdbot Code  | `clawdbot`    |     ✓     |       |          |   ✓    |   ✓    |
 | Codex CLI      | `codex`       |     ✓     |       |          |        |   ✓    |
 | Copilot CLI    | `copilot`     |     ✓     |       |          |   ✓    |   ✓    |
-| Cursor         | `cursor`      |     ✓     |   ✓   |    ✓     |   ✓    |   ✓    |
 | Antigravity CLI | `agy`        |     ✓     |       |          |   ✓    |        |
 | OpenCode       | `opencode`    |     ✓     |       |    ✓     |   ✓    |   ✓    |
-| Windsurf       | `windsurf`    |     ✓     |   ✓   |          |   ✓    |        |
 
 ## 卸载
 
