@@ -90,6 +90,8 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | 添加技能                     |
 | `ai-global add-rule <user/repo>`         | 添加规则                     |
 | `ai-global add-command <user/repo>`      | 添加命令                     |
+| `ai-global update-skills`                | 依安装记录重新安装所有技能   |
+| `ai-global remove-skill <user/repo>`     | 移除该 repo 装的全部技能与安装记录 |
 | `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影层   |
 | `ai-global disable <name\|分类路径>`      | 停用单一技能或整个分类（不投影给各工具） |
 | `ai-global enable <name\|分类路径>`       | 解除停用                         |
@@ -133,6 +135,8 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # 添加技能
 ai-global add-rule <user/repo>        # 添加规则
 ai-global add-command <user/repo>     # 添加命令
+ai-global update-skills               # 依安装记录重新安装所有技能
+ai-global remove-skill <user/repo>    # 移除该 repo 装的全部技能
 ai-global render-skills               # 重建 skills 投影层
 ai-global disable <name|分类路径>     # 停用单一技能或整个分类
 ai-global enable <name|分类路径>      # 解除停用
@@ -141,6 +145,14 @@ ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
 ai-global list-agents                 # 列出 agents
 ```
+
+`add-*` 会将来源记录在 `.ai-global/source.md`（格式 `GitHub URL|类型|安装路径`）。`update-skills` 依此记录重新 clone 并覆盖既有技能，只更新记录中已安装的项目，不会安装仓库后来新增的技能（那些请用 `add-skill`）。执行前会将原记录备份为 `source.md.bak`。本地自建、未经 `add-skill` 安装的技能没有记录，不受影响。
+
+`remove-skill` 与 `add-skill` 对称，**以 repo 为单位**：接受 `user/repo` 或完整 GitHub 网址，删掉 `v-skills/<作者>/<repo>/` 下的全部技能、对应的投影 symlink、该来源的所有安装记录与停用清单规则。同一个 repo 的技能常互相引用（handoff 交给 implement、research 产出给 to-spec），拆开来单独移除只会留下叫不动的半套，所以不提供移除单一技能的命令——**要停止使用其中某一个请用 `disable`**，实体与安装记录都会保留，随时 `enable` 回来。
+
+删除前会列出即将删除的完整清单与安装来源供确认。由于各工具的 skills 目录是整个目录的 symlink，删除后所有工具同步生效，不需逐一清理。**删除不可恢复，skills 不在备份机制涵盖范围内。**
+
+手动放进 `v-skills/manual/` 的技能没有 repo 可指定，`remove-skill` 不受理；直接删掉该目录再运行 `render-skills` 即可。
 
 支持 `user/repo` 或 `https://github.com/user/repo` 格式，资源将被下载至 `.ai-global/` 对应子目录。
 

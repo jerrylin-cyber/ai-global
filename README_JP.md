@@ -90,6 +90,8 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | スキルを追加                                         |
 | `ai-global add-rule <user/repo>`         | ルールを追加                                         |
 | `ai-global add-command <user/repo>`      | コマンドを追加                                       |
+| `ai-global update-skills`                | インストール記録に従い全スキルを再インストール       |
+| `ai-global remove-skill <user/repo>`     | その repo が入れた全スキルとインストール記録を削除   |
 | `ai-global render-skills` `ai-global -rs`| v-skills から skills 投影層を再構築 |
 | `ai-global disable <name\|カテゴリ>`      | スキルまたはカテゴリ全体を無効化（各ツールへ投影しない） |
 | `ai-global enable <name\|カテゴリ>`       | 無効化を解除                     |
@@ -133,6 +135,8 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # スキルを追加
 ai-global add-rule <user/repo>        # ルールを追加
 ai-global add-command <user/repo>     # コマンドを追加
+ai-global update-skills               # インストール記録に従い全スキルを再インストール
+ai-global remove-skill <user/repo>    # その repo が入れた全スキルを削除
 ai-global render-skills               # skills 投影層を再構築
 ai-global disable <name|カテゴリ>     # スキル／カテゴリ全体を無効化
 ai-global enable <name|カテゴリ>      # 無効化を解除
@@ -141,6 +145,14 @@ ai-global list-rules                  # rules を一覧表示
 ai-global list-commands               # commands を一覧表示
 ai-global list-agents                 # agents を一覧表示
 ```
+
+`add-*` は取得元を `.ai-global/source.md` に記録します（形式: `GitHub URL|種別|インストール先`）。`update-skills` はこの記録をもとに再 clone して既存スキルを上書きします。記録済みの項目だけが対象で、リポジトリに後から追加されたスキルは入りません（それらは `add-skill` を使ってください）。実行前に元の記録を `source.md.bak` へバックアップします。`add-skill` を通していないローカル自作スキルは記録がないため影響を受けません。
+
+`remove-skill` は `add-skill` と対になり、**repo 単位**で動きます。`user/repo` または完全な GitHub URL を渡すと、`v-skills/<作者>/<repo>/` 配下の全スキル、対応する投影 symlink、その取得元のインストール記録すべて、および該当する無効化ルールを削除します。同じ repo のスキルは互いに呼び合うことが多く（handoff が implement へ、research が to-spec へ）、個別に外すと動かない半端な状態が残ります。そのため**単一スキルを削除するコマンドはありません**——一つだけ使うのをやめたい場合は `disable` してください。実体もインストール記録も残るため、いつでも `enable` で戻せます。
+
+削除前に対象の一覧とインストール元を表示して確認を求めます。各ツールの skills ディレクトリはディレクトリ全体の symlink なので、削除は全ツールに同時に反映されます。**削除は取り消せません。skills はバックアップ機構の対象外です。**
+
+`v-skills/manual/` へ手動で置いたスキルは指定できる repo がないため `remove-skill` は受け付けません。ディレクトリを自分で削除してから `render-skills` を実行してください。
 
 `user/repo` または `https://github.com/user/repo` 形式をサポートしています。リソースは `.ai-global/` の対応するサブディレクトリにダウンロードされます。
 

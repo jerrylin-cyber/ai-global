@@ -90,6 +90,8 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global add-skill <user/repo>`        | Add skills from GitHub repository      |
 | `ai-global add-rule <user/repo>`         | Add rules from GitHub repository       |
 | `ai-global add-command <user/repo>`      | Add commands from GitHub repository    |
+| `ai-global update-skills`                | Reinstall all skills from the install records |
+| `ai-global remove-skill <user/repo>`     | Remove every skill installed from that repo, plus its records |
 | `ai-global render-skills` `ai-global -rs`| Rebuild the skills projection from v-skills |
 | `ai-global disable <name\|category>`      | Disable a skill or a whole category (not projected to any tool) |
 | `ai-global enable <name\|category>`       | Re-enable a skill or a whole category |
@@ -133,6 +135,8 @@ Project mode has its own tool directory mapping to avoid applying the global con
 ai-global add-skill <user/repo>       # Add skills
 ai-global add-rule <user/repo>        # Add rules
 ai-global add-command <user/repo>     # Add commands
+ai-global update-skills               # Reinstall all skills from the install records
+ai-global remove-skill <user/repo>    # Remove every skill installed from that repo
 ai-global render-skills               # Rebuild the skills projection
 ai-global disable <name|category>     # Disable a skill or a whole category
 ai-global enable <name|category>      # Re-enable a skill or a whole category
@@ -141,6 +145,14 @@ ai-global list-rules                  # List rules
 ai-global list-commands               # List commands
 ai-global list-agents                 # List agents
 ```
+
+`add-*` records the source in `.ai-global/source.md` (format: `GitHub URL|type|install path`). `update-skills` re-clones from those records and overwrites the existing skills. It only updates what is already recorded — skills the repository added later are not picked up (use `add-skill` for those). The old records are backed up to `source.md.bak` first. Locally authored skills that never went through `add-skill` have no record and are left alone.
+
+`remove-skill` mirrors `add-skill` and works **per repository**: give it `user/repo` or a full GitHub URL and it deletes every skill under `v-skills/<owner>/<repo>/`, their projection symlinks, all install records from that source, and any matching disable rules. Skills from one repository often call each other (handoff hands off to implement, research feeds to-spec), so removing them one at a time would leave a half-set that no longer works. There is therefore **no command to remove a single skill** — to stop using one, `disable` it; the payload and the install record stay put and `enable` brings it back.
+
+The full list of what will be deleted, along with the install source, is printed for confirmation first. Because each tool's skills directory is a symlink to the whole directory, the removal takes effect everywhere at once. **Removal cannot be undone — skills are not covered by the backup mechanism.**
+
+Skills placed by hand under `v-skills/manual/` have no repository to name, so `remove-skill` will not touch them; delete the directory yourself and run `render-skills`.
 
 Supports `user/repo` or `https://github.com/user/repo` format. Resources will be downloaded to the corresponding subdirectory under `.ai-global/`.
 

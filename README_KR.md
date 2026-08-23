@@ -90,6 +90,8 @@ ai-global update
 | `ai-global add-skill <user/repo>`        | 스킬 추가                               |
 | `ai-global add-rule <user/repo>`         | 규칙 추가                               |
 | `ai-global add-command <user/repo>`      | 명령어 추가                             |
+| `ai-global update-skills`                | 설치 기록에 따라 모든 스킬 재설치       |
+| `ai-global remove-skill <user/repo>`     | 해당 repo 가 설치한 모든 스킬과 설치 기록 제거 |
 | `ai-global render-skills` `ai-global -rs`| v-skills 기준으로 skills 투영 계층 재생성 |
 | `ai-global disable <name\|분류 경로>`     | 스킬 또는 분류 전체 비활성화 (도구에 투영하지 않음) |
 | `ai-global enable <name\|분류 경로>`      | 비활성화 해제                    |
@@ -133,6 +135,8 @@ ai-global -p add-skill <user/repo>
 ai-global add-skill <user/repo>       # 스킬 추가
 ai-global add-rule <user/repo>        # 규칙 추가
 ai-global add-command <user/repo>     # 명령어 추가
+ai-global update-skills               # 설치 기록에 따라 모든 스킬 재설치
+ai-global remove-skill <user/repo>    # 해당 repo 가 설치한 모든 스킬 제거
 ai-global render-skills               # skills 투영 계층 재생성
 ai-global disable <name|분류 경로>    # 스킬 또는 분류 전체 비활성화
 ai-global enable <name|분류 경로>     # 비활성화 해제
@@ -141,6 +145,14 @@ ai-global list-rules                  # rules 목록 표시
 ai-global list-commands               # commands 목록 표시
 ai-global list-agents                 # agents 목록 표시
 ```
+
+`add-*` 은 출처를 `.ai-global/source.md` 에 기록합니다 (형식: `GitHub URL|유형|설치 경로`). `update-skills` 는 이 기록을 기준으로 다시 clone 해 기존 스킬을 덮어씁니다. 기록된 항목만 갱신하므로 저장소에 나중에 추가된 스킬은 설치되지 않습니다 (그런 경우 `add-skill` 을 사용하세요). 실행 전에 기존 기록을 `source.md.bak` 으로 백업합니다. `add-skill` 을 거치지 않은 로컬 자작 스킬은 기록이 없어 영향을 받지 않습니다.
+
+`remove-skill` 은 `add-skill` 과 대칭이며 **repo 단위**로 동작합니다. `user/repo` 또는 전체 GitHub URL 을 주면 `v-skills/<작성자>/<repo>/` 아래의 모든 스킬, 해당 투영 symlink, 그 출처의 모든 설치 기록, 그리고 관련 비활성화 규칙을 삭제합니다. 같은 repo 의 스킬은 서로 호출하는 경우가 많아 (handoff 가 implement 로, research 가 to-spec 으로) 하나씩 제거하면 동작하지 않는 반쪽만 남습니다. 따라서 **단일 스킬을 제거하는 명령은 없습니다** — 그중 하나만 쓰지 않으려면 `disable` 하세요. 실체와 설치 기록이 모두 남으므로 언제든 `enable` 로 되돌릴 수 있습니다.
+
+삭제 전에 삭제 대상 전체 목록과 설치 출처를 표시해 확인을 요청합니다. 각 도구의 skills 디렉토리는 디렉토리 전체의 symlink 이므로 삭제는 모든 도구에 동시에 반영됩니다. **삭제는 되돌릴 수 없으며, skills 는 백업 대상에 포함되지 않습니다.**
+
+`v-skills/manual/` 에 수동으로 넣은 스킬은 지정할 repo 가 없어 `remove-skill` 이 받지 않습니다. 해당 디렉토리를 직접 삭제한 뒤 `render-skills` 를 실행하세요.
 
 `user/repo` 또는 `https://github.com/user/repo` 형식을 지원합니다. 리소스는 `.ai-global/` 하위의 해당 서브디렉토리에 다운로드됩니다.
 
