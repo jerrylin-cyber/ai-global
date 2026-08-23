@@ -91,8 +91,8 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | 규칙 추가                               |
 | `ai-global add-command <user/repo>`      | 명령어 추가                             |
 | `ai-global render-skills` `ai-global -rs`| v-skills 기준으로 skills 투영 계층 재생성 |
-| `ai-global disable <name>`               | 스킬 비활성화 (도구에 투영하지 않음) |
-| `ai-global enable <name>`                | 비활성화 해제                    |
+| `ai-global disable <name\|분류 경로>`     | 스킬 또는 분류 전체 비활성화 (도구에 투영하지 않음) |
+| `ai-global enable <name\|분류 경로>`      | 비활성화 해제                    |
 | `ai-global list-skills` `ai-global -ls`  | 전역 skills 목록 표시                   |
 | `ai-global list-rules` `ai-global -lr`   | 전역 rules 목록 표시                    |
 | `ai-global list-commands` `ai-global -lc`| 전역 commands 목록 표시                 |
@@ -134,8 +134,8 @@ ai-global add-skill <user/repo>       # 스킬 추가
 ai-global add-rule <user/repo>        # 규칙 추가
 ai-global add-command <user/repo>     # 명령어 추가
 ai-global render-skills               # skills 투영 계층 재생성
-ai-global disable <name>              # 스킬 비활성화
-ai-global enable <name>               # 비활성화 해제
+ai-global disable <name|분류 경로>    # 스킬 또는 분류 전체 비활성화
+ai-global enable <name|분류 경로>     # 비활성화 해제
 ai-global list-skills                 # skills 목록 표시
 ai-global list-rules                  # rules 목록 표시
 ai-global list-commands               # commands 목록 표시
@@ -199,7 +199,7 @@ lazyjerry/mattpocock-skills/in-progress/
 anthropics/skills/pdf
 ```
 
-비활성화는 투영 계층에만 영향을 주며, 실체 디렉토리와 설치 기록은 변경되지 않습니다.
+비활성화는 투영 계층에만 영향을 주며, 실체 디렉토리와 설치 기록은 변경되지 않으므로 언제든 `enable` 로 되돌릴 수 있습니다. `disable` / `enable` 은 분류 경로(`user/repo` 또는 `user/repo/bucket`)도 받아 그룹 단위로 한 번에 처리합니다. `remove-skill` 이 repo 단위인 것에 대응하는 장치로, 특정 스킬을 잠시 쓰지 않으려면 삭제가 아니라 비활성화하세요.
 
 ### 병합 동작
 

@@ -91,8 +91,8 @@ Note: AI Global only handles tool directories that already exist. It does not cr
 | `ai-global add-rule <user/repo>`         | Add rules from GitHub repository       |
 | `ai-global add-command <user/repo>`      | Add commands from GitHub repository    |
 | `ai-global render-skills` `ai-global -rs`| Rebuild the skills projection from v-skills |
-| `ai-global disable <name>`               | Disable a skill (not projected to any tool) |
-| `ai-global enable <name>`                | Re-enable a skill               |
+| `ai-global disable <name\|category>`      | Disable a skill or a whole category (not projected to any tool) |
+| `ai-global enable <name\|category>`       | Re-enable a skill or a whole category |
 | `ai-global list-skills` `ai-global -ls`  | List global skills                     |
 | `ai-global list-rules` `ai-global -lr`   | List global rules                      |
 | `ai-global list-commands` `ai-global -lc`| List global commands                   |
@@ -134,8 +134,8 @@ ai-global add-skill <user/repo>       # Add skills
 ai-global add-rule <user/repo>        # Add rules
 ai-global add-command <user/repo>     # Add commands
 ai-global render-skills               # Rebuild the skills projection
-ai-global disable <name>              # Disable a skill
-ai-global enable <name>               # Re-enable a skill
+ai-global disable <name|category>     # Disable a skill or a whole category
+ai-global enable <name|category>      # Re-enable a skill or a whole category
 ai-global list-skills                 # List skills
 ai-global list-rules                  # List rules
 ai-global list-commands               # List commands
@@ -199,7 +199,7 @@ lazyjerry/mattpocock-skills/in-progress/
 anthropics/skills/pdf
 ```
 
-Disabling only affects the projection layer — the payload directory and the install record are left untouched.
+Disabling only affects the projection layer — the payload directory and the install record are left untouched, so `enable` always brings a skill back. `disable` / `enable` also take a category path (`user/repo` or `user/repo/bucket`) to switch a whole group at once. This is the counterpart to `remove-skill` being repo-scoped: to stop using one skill, disable it rather than deleting it.
 
 ### Merge behavior
 

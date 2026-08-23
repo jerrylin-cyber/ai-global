@@ -91,8 +91,8 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | ルールを追加                                         |
 | `ai-global add-command <user/repo>`      | コマンドを追加                                       |
 | `ai-global render-skills` `ai-global -rs`| v-skills から skills 投影層を再構築 |
-| `ai-global disable <name>`               | スキルを無効化（各ツールへ投影しない） |
-| `ai-global enable <name>`                | 無効化を解除                     |
+| `ai-global disable <name\|カテゴリ>`      | スキルまたはカテゴリ全体を無効化（各ツールへ投影しない） |
+| `ai-global enable <name\|カテゴリ>`       | 無効化を解除                     |
 | `ai-global list-skills` `ai-global -ls`  | グローバル skills を一覧表示                         |
 | `ai-global list-rules` `ai-global -lr`   | グローバル rules を一覧表示                          |
 | `ai-global list-commands` `ai-global -lc`| グローバル commands を一覧表示                       |
@@ -134,8 +134,8 @@ ai-global add-skill <user/repo>       # スキルを追加
 ai-global add-rule <user/repo>        # ルールを追加
 ai-global add-command <user/repo>     # コマンドを追加
 ai-global render-skills               # skills 投影層を再構築
-ai-global disable <name>              # スキルを無効化
-ai-global enable <name>               # 無効化を解除
+ai-global disable <name|カテゴリ>     # スキル／カテゴリ全体を無効化
+ai-global enable <name|カテゴリ>      # 無効化を解除
 ai-global list-skills                 # skills を一覧表示
 ai-global list-rules                  # rules を一覧表示
 ai-global list-commands               # commands を一覧表示
@@ -199,7 +199,7 @@ lazyjerry/mattpocock-skills/in-progress/
 anthropics/skills/pdf
 ```
 
-無効化は投影層にのみ影響し、実体ディレクトリとインストール記録は変更されません。
+無効化は投影層にのみ影響し、実体ディレクトリとインストール記録は変更されないため、いつでも `enable` で戻せます。`disable` / `enable` は分類パス（`user/repo` または `user/repo/bucket`）も受け付け、グループ単位で一括切り替えできます。これは `remove-skill` が repo 単位であることの対になる仕組みです。個別のスキルを使わなくしたいときは削除ではなく無効化してください。
 
 ### マージ動作
 

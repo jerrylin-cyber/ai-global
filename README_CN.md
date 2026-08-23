@@ -91,8 +91,8 @@ ai-global update
 | `ai-global add-rule <user/repo>`         | 添加规则                     |
 | `ai-global add-command <user/repo>`      | 添加命令                     |
 | `ai-global render-skills` `ai-global -rs`| 依 v-skills 重建 skills 投影层   |
-| `ai-global disable <name>`               | 停用技能（不投影给各工具）       |
-| `ai-global enable <name>`                | 解除停用                         |
+| `ai-global disable <name\|分类路径>`      | 停用单一技能或整个分类（不投影给各工具） |
+| `ai-global enable <name\|分类路径>`       | 解除停用                         |
 | `ai-global list-skills` `ai-global -ls`  | 列出全局 skills              |
 | `ai-global list-rules` `ai-global -lr`   | 列出全局 rules               |
 | `ai-global list-commands` `ai-global -lc`| 列出全局 commands            |
@@ -134,8 +134,8 @@ ai-global add-skill <user/repo>       # 添加技能
 ai-global add-rule <user/repo>        # 添加规则
 ai-global add-command <user/repo>     # 添加命令
 ai-global render-skills               # 重建 skills 投影层
-ai-global disable <name>              # 停用技能
-ai-global enable <name>               # 解除停用
+ai-global disable <name|分类路径>     # 停用单一技能或整个分类
+ai-global enable <name|分类路径>      # 解除停用
 ai-global list-skills                 # 列出 skills
 ai-global list-rules                  # 列出 rules
 ai-global list-commands               # 列出 commands
@@ -199,7 +199,7 @@ lazyjerry/mattpocock-skills/in-progress/
 anthropics/skills/pdf
 ```
 
-停用只影响投影层，实体目录与安装记录都不会被改动。
+停用只影响投影层，实体目录与安装记录都不会被改动，随时 `enable` 回来。`disable` / `enable` 也吃分类路径（`user/repo` 或 `user/repo/bucket`），一次处理整组。这是 `remove-skill` 以 repo 为单位的配套：要暂时不用某个技能，停用它而不是删掉它。
 
 ### 合并行为
 
