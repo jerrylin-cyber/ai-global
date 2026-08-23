@@ -4,7 +4,7 @@
 # https://github.com/lazyjerry/ai-global
 
 # 版本號
-VERSION="2.10.1"
+VERSION="2.10.2"
 
 # GitHub 倉庫路徑
 REPO_SLUG="lazyjerry/ai-global"
@@ -60,10 +60,10 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "12|global|add-rule|repo|新增 rule"
   "13|global|add-command|repo|新增 command"
   "14|global|update-skills||更新已安裝的 skill"
-  "15|global|remove-skill|name|移除 skill"
+  "15|global|remove-skill|repo|移除 repo 的 skill"
   "16|global|render-skills||重建 skills 投影"
-  "17|global|disable|name|停用 skill"
-  "18|global|enable|name|啟用 skill"
+  "17|global|disable|target|停用 skill/分類"
+  "18|global|enable|target|啟用 skill/分類"
   "21|project|update||更新 symlink"
   "22|project|list||列出支援工具"
   "23|project|relink||重建 symlink"
@@ -76,10 +76,10 @@ declare -a INTERACTIVE_MENU_ITEMS=(
   "30|project|add-rule|repo|新增 rule"
   "31|project|add-command|repo|新增 command"
   "32|project|update-skills||更新已安裝的 skill"
-  "33|project|remove-skill|name|移除 skill"
+  "33|project|remove-skill|repo|移除 repo 的 skill"
   "34|project|render-skills||重建 skills 投影"
-  "35|project|disable|name|停用 skill"
-  "36|project|enable|name|啟用 skill"
+  "35|project|disable|target|停用 skill/分類"
+  "36|project|enable|target|啟用 skill/分類"
 )
 
 # 顏色
@@ -137,6 +137,7 @@ format_menu_command() {
     key) echo "$prefix $cmd <key|all>" ;;
     repo) echo "$prefix $cmd <user/repo>" ;;
     name) echo "$prefix $cmd <name>" ;;
+    target) echo "$prefix $cmd <name|分類路徑>" ;;
     *) echo "$prefix $cmd" ;;
   esac
 }
@@ -188,7 +189,7 @@ show_help() {
   echo -e "  ${GREEN}add-rule <user/repo>${NC}     從 GitHub 安裝 rule 至 .ai-global/rules/"
   echo -e "  ${GREEN}add-command <user/repo>${NC}  從 GitHub 安裝 command 至 .ai-global/commands/"
   echo -e "  ${GREEN}update-skills${NC}            收攏未分類 skill，並依 source.md 紀錄重新安裝"
-  echo -e "  ${GREEN}remove-skill <name>${NC}      移除指定 skill 並清除其安裝紀錄"
+  echo -e "  ${GREEN}remove-skill <user/repo>${NC} 移除該 repo 裝的全部 skill 並清除安裝紀錄"
   echo -e "  ${GREEN}list-skills, -ls${NC}         列出 skills（v-skills 分類樹）"
   echo -e "  ${GREEN}list-rules, -lr${NC}          列出 rules"
   echo -e "  ${GREEN}list-commands, -lc${NC}       列出 commands"
@@ -197,8 +198,10 @@ show_help() {
   echo ""
   echo -e "${BLUE}skill 分類與停用:${NC}"
   echo -e "  ${GREEN}render-skills, -rs${NC}       依 v-skills 重建 skills/ 投影層"
-  echo -e "  ${GREEN}disable <name>${NC}           停用 skill（不投影給各工具，實體與紀錄都保留）"
-  echo -e "  ${GREEN}enable <name>${NC}            解除停用"
+  echo -e "  ${GREEN}disable <name|分類路徑>${NC}  停用（不投影給各工具，實體與紀錄都保留）"
+  echo -e "  ${GREEN}enable <name|分類路徑>${NC}   解除停用"
+  echo -e "  ${GRAY}分類路徑吃 user/repo（整個 repo）或 user/repo/bucket（整個 bucket）；${NC}"
+  echo -e "  ${GRAY}add-skill / remove-skill 一律以 repo 為單位，單一 skill 的開關走 disable / enable。${NC}"
   echo -e "  ${GRAY}skill 實體放在 .ai-global/v-skills/<作者>/<repo>/<分類>/<名稱>/，${NC}"
   echo -e "  ${GRAY}各工具讀的 .ai-global/skills/ 只是扁平的 symlink 投影層；要編輯請改 v-skills 那份。${NC}"
   echo -e "  ${GRAY}同名 skill 可共存於不同分類，但只能有一個啟用。停用清單: .ai-global/disable-skills.md${NC}"
@@ -1540,6 +1543,25 @@ drop_source_record() {
     && mv -- "$tmp" "$source_file"
 }
 
+# 移除同一來源 URL 的所有紀錄，輸出移除筆數
+# remove-skill 以 repo 為單位，逐筆呼叫 drop_source_record 會漏掉路徑已不存在的孤兒紀錄
+drop_source_records_by_url() {
+  local source_file="$1"
+  local url="$2"
+  local label="$3"
+
+  [[ ! -f "$source_file" ]] && echo 0 && return 0
+
+  local matched
+  matched=$(awk -F'|' -v u="$url" -v l="$label" '$1 == u && $2 == l' "$source_file" | wc -l | tr -d ' ')
+  if [[ "$matched" -gt 0 ]]; then
+    local tmp="${source_file}.tmp.$$"
+    awk -F'|' -v u="$url" -v l="$label" '!($1 == u && $2 == l)' "$source_file" > "$tmp"
+    mv -- "$tmp" "$source_file"
+  fi
+  echo "$matched"
+}
+
 # 寫入安裝紀錄（upsert：同 類型+路徑 的舊行先移除再追加）
 record_source() {
   local source_file="$1"
@@ -2235,7 +2257,6 @@ update_skills() {
   log_ok "更新完成"
 }
 
-# 移除指定 skill（同時清除 source.md 紀錄）
 # 依 skill 名或 v-skills 相對路徑找出對應項目，逐行輸出相對路徑
 # 查詢字串含 / 視為完整相對路徑，否則比對 skill 名（同名可能多筆）
 vskills_resolve() {
@@ -2292,6 +2313,50 @@ resolve_one_skill() {
   return 0
 }
 
+# 解析為 v-skills 底下的分類目錄（repo 層或 bucket 層皆可），成功時放進 _RESOLVED_CATEGORY
+# 不印訊息，由呼叫端決定要不要退回單一 skill 的錯誤訊息
+_RESOLVED_CATEGORY=""
+resolve_category() {
+  local query="${1%/}"
+  local base_dir="${2:-$HOME}"
+
+  _RESOLVED_CATEGORY=""
+  [[ -z "$query" ]] && return 1
+
+  case "$query" in
+    . | .. | ./* | ../* | */./* | */../* | */. | */..) return 1 ;;
+  esac
+
+  local vdir
+  vdir=$(vskills_dir "$base_dir")
+  [[ ! -d "$vdir/$query" ]] && return 1
+  # 含 SKILL.md 的是 skill 不是分類
+  [[ -f "$vdir/$query/SKILL.md" ]] && return 1
+
+  local rel name
+  while IFS='|' read -r rel name; do
+    [[ -z "$rel" ]] && continue
+    if [[ "$rel" == "$query/"* ]]; then
+      _RESOLVED_CATEGORY="$query"
+      return 0
+    fi
+  done < <(vskills_enumerate "$vdir")
+
+  return 1
+}
+
+# 列出某個分類底下的所有 skill 相對路徑
+skills_under_category() {
+  local prefix="$1"
+  local vdir
+  vdir=$(vskills_dir "${2:-$HOME}")
+  local rel name
+  while IFS='|' read -r rel name; do
+    [[ -z "$rel" ]] && continue
+    [[ "$rel" == "$prefix"* ]] && echo "$rel"
+  done < <(vskills_enumerate "$vdir")
+}
+
 # 停用清單：加入一行（已存在回傳 1）
 disable_list_add() {
   local list_file="$1"
@@ -2314,30 +2379,106 @@ disable_list_remove() {
   return 0
 }
 
+# 停用清單：移除所有以 $2 為前綴的規則（含前綴本身），輸出移除條數
+# 整組啟用與 remove-skill 都要一次清掉分類規則與其底下的個別規則
+disable_list_remove_prefix() {
+  local list_file="$1"
+  local prefix="$2"
+
+  [[ ! -f "$list_file" ]] && echo 0 && return 0
+
+  local strip='{ line = $0; sub(/#.*/, "", line); gsub(/^[ \t]+|[ \t]+$/, "", line) }'
+  local matched
+  matched=$(awk -v p="$prefix" "$strip"' line != "" && index(line, p) == 1' "$list_file" | wc -l | tr -d ' ')
+  if [[ "$matched" -gt 0 ]]; then
+    local tmp="${list_file}.tmp.$$"
+    awk -v p="$prefix" "$strip"' line != "" && index(line, p) == 1 { next } { print }' "$list_file" > "$tmp"
+    mv -- "$tmp" "$list_file"
+  fi
+  echo "$matched"
+}
+
+# 找出命中某個 skill 的「整個分類」停用規則（/ 結尾），一行一條
+matching_category_rules() {
+  local rel="$1"
+  local list_file
+  list_file=$(disable_list_path "${2:-$HOME}")
+  [[ ! -f "$list_file" ]] && return 0
+
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    line=$(trim_space "$line")
+    [[ -z "$line" ]] && continue
+    [[ "$line" != */ ]] && continue
+    [[ "$rel" == "$line"* ]] && echo "$line"
+  done < "$list_file"
+}
+
 # 停用 skill：只動 disable-skills.md 與投影層，不碰實體目錄與 source.md
 disable_skill() {
   local query="$1"
   local base_dir="${2:-$HOME}"
 
   if [[ -z "$query" ]]; then
-    log_error "用法: ai-global disable <skill-name|v-skills 相對路徑>"
+    log_error "用法: ai-global disable <skill-name|v-skills 相對路徑|分類路徑>"
+    echo ""
+    echo "範例:"
+    echo "  ai-global disable pdf                              # 單一 skill"
+    echo "  ai-global disable user/repo/in-progress/loop-me    # 同名時用完整路徑"
+    echo "  ai-global disable user/repo/in-progress            # 整個 bucket"
+    echo "  ai-global disable user/repo                        # 整個 repo"
     return 1
   fi
 
   log_context_info "$(vskills_dir "$base_dir")" || return
-  resolve_one_skill "$query" "$base_dir" "停用" || return 1
-  local rel="$_RESOLVED_REL"
 
   local list_file
   list_file=$(disable_list_path "$base_dir")
-  if ! disable_list_add "$list_file" "$rel"; then
-    log_info "已經在停用清單中: $rel"
+
+  # 先試單一 skill，不是的話再試整個分類（repo 層或 bucket 層）
+  # 用 vskills_resolve 探路而不是先呼叫 resolve_one_skill：log_* 印到 stdout，
+  # 重導向吞不掉，探路失敗的「找不到」會漏給使用者
+  if [[ -n "$(vskills_resolve "$query" "$base_dir")" ]]; then
+    resolve_one_skill "$query" "$base_dir" "停用" || return 1
+    local rel="$_RESOLVED_REL"
+    if ! disable_list_add "$list_file" "$rel"; then
+      log_info "已經在停用清單中: $rel"
+      return 0
+    fi
+    if render_skills "$base_dir"; then
+      log_ok "已停用: $rel"
+      log_info "實體目錄與安裝紀錄未變動，用 enable 即可復原"
+    else
+      return 1
+    fi
     return 0
   fi
 
+  if ! resolve_category "$query" "$base_dir"; then
+    # 既不是 skill 也不是分類，讓 resolve_one_skill 印出「找不到」
+    resolve_one_skill "$query" "$base_dir" "停用" || return 1
+  fi
+
+  local prefix="$_RESOLVED_CATEGORY/"
+  if grep -qxF "$prefix" "$list_file" 2> /dev/null; then
+    log_info "整個分類已經在停用清單中: $prefix"
+    return 0
+  fi
+
+  local -a subs=()
+  local line
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && subs+=("$line")
+  done < <(skills_under_category "$prefix" "$base_dir")
+
+  # 底下的個別規則會被分類規則涵蓋，先清掉避免清單長出重複語意
+  disable_list_remove_prefix "$list_file" "$prefix" > /dev/null
+  disable_list_add "$list_file" "$prefix" > /dev/null
+
   if render_skills "$base_dir"; then
-    log_ok "已停用: $rel"
-    log_info "實體目錄與安裝紀錄未變動，用 enable 即可復原"
+    log_ok "已停用整個分類: ${prefix}（${#subs[@]} 個 skill）"
+    log_info "實體目錄與安裝紀錄未變動，用 enable $_RESOLVED_CATEGORY 即可復原"
   else
     return 1
   fi
@@ -2349,98 +2490,155 @@ enable_skill() {
   local base_dir="${2:-$HOME}"
 
   if [[ -z "$query" ]]; then
-    log_error "用法: ai-global enable <skill-name|v-skills 相對路徑>"
+    log_error "用法: ai-global enable <skill-name|v-skills 相對路徑|分類路徑>"
+    echo ""
+    echo "範例:"
+    echo "  ai-global enable pdf                               # 單一 skill"
+    echo "  ai-global enable user/repo/in-progress/loop-me     # 同名時用完整路徑"
+    echo "  ai-global enable user/repo/in-progress             # 整個 bucket"
+    echo "  ai-global enable user/repo                         # 整個 repo"
     return 1
   fi
 
   log_context_info "$(vskills_dir "$base_dir")" || return
-  resolve_one_skill "$query" "$base_dir" "啟用" || return 1
-  local rel="$_RESOLVED_REL"
 
   local list_file
   list_file=$(disable_list_path "$base_dir")
 
-  if ! disable_list_remove "$list_file" "$rel"; then
-    if is_skill_disabled "$rel" "$base_dir"; then
-      log_error "$rel 是被「整個分類停用」的規則命中，不能單獨啟用"
-      log_info "請自行編輯 $(beautify_dir "$list_file")，移除或改寫那條分類規則"
+  # 先試單一 skill，不是的話再試整個分類；探路同樣不能靠重導向（見 disable_skill）
+  if [[ -n "$(vskills_resolve "$query" "$base_dir")" ]]; then
+    resolve_one_skill "$query" "$base_dir" "啟用" || return 1
+    local rel="$_RESOLVED_REL"
+    if ! disable_list_remove "$list_file" "$rel"; then
+      if is_skill_disabled "$rel" "$base_dir"; then
+        log_error "$rel 是被「整個分類停用」的規則命中，不能單獨啟用"
+        local rule
+        while IFS= read -r rule; do
+          [[ -n "$rule" ]] && log_info "請改用: ai-global enable ${rule%/}"
+        done < <(matching_category_rules "$rel" "$base_dir")
+        return 1
+      fi
+      log_info "本來就是啟用狀態: $rel"
+      return 0
+    fi
+    if render_skills "$base_dir"; then
+      log_ok "已啟用: $rel"
+    else
+      log_warn "已從停用清單移除，但投影未更新（見上方衝突訊息）"
+      log_info "請先停用另一個同名 skill，再執行 render-skills"
       return 1
     fi
-    log_info "本來就是啟用狀態: $rel"
+    return 0
+  fi
+
+  if ! resolve_category "$query" "$base_dir"; then
+    # 既不是 skill 也不是分類，讓 resolve_one_skill 印出「找不到」
+    resolve_one_skill "$query" "$base_dir" "啟用" || return 1
+  fi
+
+  # 整組啟用：分類規則與其底下的個別規則一起清掉
+  local prefix="$_RESOLVED_CATEGORY/"
+  local removed
+  removed=$(disable_list_remove_prefix "$list_file" "$prefix")
+  if [[ "$removed" -eq 0 ]]; then
+    log_info "本來就是啟用狀態: $prefix"
     return 0
   fi
 
   if render_skills "$base_dir"; then
-    log_ok "已啟用: $rel"
+    log_ok "已啟用整個分類: ${prefix}（清掉 $removed 條停用規則）"
   else
-    log_warn "已從停用清單移除，但投影未更新（見上方衝突訊息）"
-    log_info "請先停用另一個同名 skill，再執行 render-skills"
+    log_warn "已從停用清單移除 $removed 條規則，但投影未更新（見上方衝突訊息）"
+    log_info "請先停用衝突的同名 skill，再執行 render-skills"
     return 1
   fi
 }
 
+# 移除某個 repo 裝的全部 skill（實體、投影、安裝紀錄、停用規則一起清）
+# 以 repo 為單位與 add-skill 對稱；單一 skill 的開關是 disable / enable，不在這裡
 remove_skill() {
-  local name="$1"
+  local input="$1"
   local base_dir="${2:-$HOME}"
 
-  if [[ -z "$name" ]]; then
-    log_error "用法: ai-global remove-skill <skill-name>"
+  if [[ -z "$input" ]]; then
+    log_error "用法: ai-global remove-skill <user/repo>"
     echo ""
     echo "範例:"
-    echo "  ai-global remove-skill my-skill"
+    echo "  ai-global remove-skill user/repo"
+    echo "  ai-global remove-skill https://github.com/user/repo"
     echo ""
-    log_info "可用 list-skills 查看已安裝的 skill"
+    log_info "移除以 repo 為單位（與 add-skill 對稱），會刪掉該 repo 裝的全部 skill"
+    log_info "只想關掉其中一個請用 disable，實體與紀錄都會保留"
     return 1
   fi
 
-  # 擋掉路徑穿越；v-skills 相對路徑允許帶 /，但不得含 . 或 ..
-  if [[ "$name" == "." ]] || [[ "$name" == ".." ]] \
-    || [[ "$name" == */../* ]] || [[ "$name" == ../* ]] || [[ "$name" == */.. ]] \
-    || [[ "$name" == */./* ]] || [[ "$name" == ./* ]] || [[ "$name" == */. ]]; then
-    log_error "無效的 skill 名稱: $name"
+  # 與 add_skill 用同一組驗證與解析，兩邊接受的輸入形式必須一致
+  if not_github_ref "$input"; then
+    log_error "輸入無效，請提供 GitHub 倉庫。"
+    echo ""
+    echo "範例:"
+    echo "  ai-global remove-skill user/repo"
+    echo "  ai-global remove-skill https://github.com/user/repo"
+    return 1
+  fi
+
+  local parsed owner repo path
+  parsed=$(parse_github_ref "$input")
+  owner=$(echo "$parsed" | cut -d'/' -f1)
+  repo=$(echo "$parsed" | cut -d'/' -f2)
+  path=$(echo "$parsed" | cut -d'/' -f3-)
+
+  if [[ -z "$owner" ]] || [[ -z "$repo" ]]; then
+    log_error "無效的 GitHub 參照: $input"
+    return 1
+  fi
+
+  if [[ -n "$path" ]]; then
+    log_error "不支援子路徑，僅接受 user/repo 格式: $input"
     return 1
   fi
 
   local skills_dir="$base_dir/.ai-global/skills"
   local vdir
   vdir=$(vskills_dir "$base_dir")
+  local repo_dir="$vdir/$owner/$repo"
+  local github_url="https://github.com/$owner/$repo"
 
   log_context_info "$base_dir/.ai-global" || return
 
-  # 先查 v-skills（實體真相來源），找不到才退回 skills/ 底下尚未收攏的實體目錄
-  local target="" rel="" skill_name=""
-  if resolve_one_skill "$name" "$base_dir" "移除" 2> /dev/null; then
-    rel="$_RESOLVED_REL"
-    target="$vdir/$rel"
-    skill_name=$(basename "$rel")
-  elif [[ -d "$skills_dir/$name" ]] && [[ ! -L "$skills_dir/$name" ]]; then
-    target="$skills_dir/$name"
-    skill_name="$name"
-  else
-    # 讓 resolve_one_skill 印出「找不到」或「多個同名」的訊息
-    resolve_one_skill "$name" "$base_dir" "移除" || return 1
+  # v-skills/<owner>/<repo> 本身含 SKILL.md → 這是單一 skill，不是 repo 安裝目錄
+  if [[ -f "$repo_dir/SKILL.md" ]]; then
+    log_error "$owner/$repo 是單一 skill，不是 repo 安裝目錄"
+    log_info "remove-skill 以 repo 為單位；要停止使用單一 skill 請用: ai-global disable $owner/$repo"
+    return 1
   fi
+
+  local -a rels=()
+  local line
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && rels+=("$line")
+  done < <(skills_under_category "$owner/$repo/" "$base_dir")
 
   local source_file
   source_file=$(source_file_path "$base_dir")
-  local recorded_path legacy_path
-  recorded_path=$(beautify_dir "$target")
-  legacy_path=$(beautify_dir "$skills_dir/$skill_name")
-  local origin=""
-  if [[ -f "$source_file" ]]; then
-    # 用實體路徑比對，已分類的 skill 才不會被誤報「沒有安裝來源紀錄」
-    origin=$(awk -F'|' -v p="$recorded_path" '$2 == "skill" && $3 == p { print $1 }' "$source_file" | tail -1)
-    if [[ -z "$origin" ]] && [[ "$legacy_path" != "$recorded_path" ]]; then
-      origin=$(awk -F'|' -v p="$legacy_path" '$2 == "skill" && $3 == p { print $1 }' "$source_file" | tail -1)
-    fi
+  local record_count=0
+  [[ -f "$source_file" ]] && record_count=$(awk -F'|' -v u="$github_url" \
+    '$1 == u && $2 == "skill"' "$source_file" | wc -l | tr -d ' ')
+
+  if [[ ${#rels[@]} -eq 0 ]] && [[ "$record_count" -eq 0 ]]; then
+    log_error "找不到從 $github_url 安裝的 skill"
+    log_info "可用 list-skills 查看已安裝的 skill"
+    return 1
   fi
 
-  log_warn "即將刪除: $recorded_path"
-  if [[ -n "$origin" ]]; then
-    log_info "安裝來源: ${origin} (可日後用 add-skill 重新安裝)"
-  else
-    log_warn "此 skill 沒有安裝來源紀錄，刪除後無法自動還原"
-  fi
+  log_warn "即將刪除 $owner/$repo 安裝的全部 skill（${#rels[@]} 個）:"
+  for line in "${rels[@]}"; do
+    echo "  $line"
+  done
+  echo ""
+  log_info "安裝來源: $github_url (可日後用 add-skill 重新安裝)"
+  local orphan=$((record_count - ${#rels[@]}))
+  [[ "$orphan" -gt 0 ]] && log_info "另有 $orphan 筆紀錄的路徑已不存在，會一併清除"
   echo ""
   read -r -p "確定刪除?[y/N] " _reply
   _reply="${_reply:-N}"
@@ -2450,30 +2648,29 @@ remove_skill() {
     return 0
   fi
 
-  rm -rf -- "$target"
+  [[ -d "$repo_dir" ]] && rm -rf -- "$repo_dir"
+  # owner 底下沒有別的 repo 了就一併收掉，避免分類樹留下空層
+  rmdir -- "$vdir/$owner" 2> /dev/null || true
 
-  # 順手清掉投影 symlink（render_skills 也會清，這裡先做讓狀態立即一致）
-  local link="$skills_dir/$skill_name"
-  if [[ -L "$link" ]]; then
-    local link_target
+  # 先清投影 symlink：render_skills 遇到同名衝突會中止，屆時斷鏈會留在 skills/
+  local link link_target
+  for link in "$skills_dir"/*; do
+    [[ -L "$link" ]] || continue
     link_target=$(readlink "$link" 2> /dev/null || true)
-    if [[ "$link_target" == ../v-skills/* ]] || [[ "$link_target" == "$vdir"/* ]]; then
-      rm -f -- "$link"
-    fi
-  fi
+    [[ "$link_target" == "../v-skills/$owner/$repo/"* ]] && rm -f -- "$link"
+  done
 
-  # 實體路徑與舊的扁平路徑各清一次，避免手動搬移或中途失敗留下孤兒紀錄
-  drop_source_record "$source_file" "skill" "$recorded_path"
-  [[ "$legacy_path" != "$recorded_path" ]] && drop_source_record "$source_file" "skill" "$legacy_path"
+  local dropped
+  dropped=$(drop_source_records_by_url "$source_file" "$github_url" "skill")
 
-  # 從停用清單移除
-  [[ -n "$rel" ]] && disable_list_remove "$(disable_list_path "$base_dir")" "$rel" \
-    && log_info "已從停用清單移除: $rel"
+  local removed
+  removed=$(disable_list_remove_prefix "$(disable_list_path "$base_dir")" "$owner/$repo/")
+  [[ "$removed" -gt 0 ]] && log_info "已從停用清單移除 $removed 條規則"
 
   render_skills "$base_dir" > /dev/null 2>&1
 
   echo ""
-  log_ok "已移除 skill: $skill_name"
+  log_ok "已移除 $owner/$repo 的 ${#rels[@]} 個 skill（清除 $dropped 筆安裝紀錄）"
 }
 
 # 升級
@@ -2649,6 +2846,10 @@ show_interactive_menu() {
       name)
         argument=$(prompt_interactive_arg "skill 名稱（同名時用 v-skills 相對路徑）: ")
         [[ -z "$argument" ]] && { log_error "未輸入 skill 名稱"; return 1; }
+        ;;
+      target)
+        argument=$(prompt_interactive_arg "skill 名稱或分類路徑（user/repo、user/repo/bucket）: ")
+        [[ -z "$argument" ]] && { log_error "未輸入 skill 名稱或分類路徑"; return 1; }
         ;;
       *)
         argument=""
